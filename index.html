@@ -39,6 +39,8 @@
   input, select, textarea { width: 100%; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid #2d5a3f; background: #0f1f16; color: #fff; margin-top: 4px; font-family: inherit; }
   label { display: block; font-size: 13px; color: #8fb39c; margin-top: 10px; }
   .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dos > * { min-width: 0; }
+  input[type=date] { min-width: 0; }
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; margin-top: 8px; }
   .stats div { background: #0f1f16; border-radius: 8px; padding: 8px 2px; }
   .stats b { display: block; font-size: 17px; }
@@ -77,7 +79,7 @@
 
 <!-- ================= APP ================= -->
 <div id="app" class="oculto">
-<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.1</small></b><button id="btnSalir">Salir</button></header>
+<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.3</small></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
 <div id="bannerDemo" class="oculto" style="background:#7a6420;color:#fff;font-size:13px;padding:7px 14px;text-align:center">MODO DEMO · los datos se guardan solo en este teléfono</div>
 <main>
 
@@ -130,7 +132,7 @@
 
   <!-- ---------- ANIMALES ---------- -->
   <section class="vista" id="v-animales">
-    <div class="fila"><h2>Animales</h2><button class="btn verde peq" id="btnNuevoAnimal">+ Nuevo</button></div>
+    <div class="fila"><h2>Animales</h2><span style="display:flex;gap:6px"><button class="btn peq" id="btnCarga">📥 Carga inicial</button><button class="btn verde peq" id="btnNuevoAnimal">+ Nuevo</button></span></div>
     <input id="buscar" placeholder="Buscar por arete o nombre">
     <div class="dos" style="margin-top:6px">
       <select id="filtroLote"></select>
@@ -169,7 +171,110 @@
     <div id="ultEventos"></div>
   </section>
 
-<!-- ---------- SANIDAD ---------- -->
+<!-- ---------- CARGA INICIAL ---------- -->
+  <section class="vista" id="v-carga">
+    <button class="btn gris peq" id="btnVolverCarga">← Volver a Animales</button>
+    <h2 style="margin-top:12px">📥 Carga inicial del rebaño</h2>
+    <div class="dos">
+      <button class="btn" id="tabManga">🐄 Registro en manga</button>
+      <button class="btn gris" id="tabExcel">📄 Importar Excel</button>
+    </div>
+
+    <!-- Registro rápido -->
+    <div id="panelManga" style="margin-top:12px">
+      <div class="card">
+        <b>Datos fijos</b> <span class="sub">(se mantienen de un animal a otro)</span>
+        <div class="dos">
+          <div><label>Lote</label><select id="cLote"></select></div>
+          <div><label>Sexo</label><select id="cSexo"><option value="">—</option><option>Hembra</option><option>Macho</option></select></div>
+        </div>
+        <div class="dos">
+          <div><label>Raza</label><input id="cRaza"></div>
+          <div><label>Origen</label><select id="cOrigen"><option value="">—</option><option>Nacido</option><option>Comprado</option></select></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="fila"><b>Peso de la báscula</b><button class="btn peq" id="cConectar">Conectar</button></div>
+        <div class="visor" style="margin-top:8px;padding:10px"><span class="peso" id="cPeso" style="font-size:44px">----</span> <span class="unidad">kg</span>
+          <div class="estab" id="cEstab">—</div></div>
+        <label class="chk" style="color:#e8f0ea;font-size:15px;margin-top:10px"><input type="checkbox" id="cUsarBascula" checked> Usar el peso de la báscula</label>
+        <div id="cPesoManualBox" class="oculto"><label>Peso manual (kg)</label><input id="cPesoManual" type="number" inputmode="decimal"></div>
+      </div>
+      <div class="card">
+        <div class="dos">
+          <div><label>Arete *</label><input id="cArete" autocomplete="off"></div>
+          <div><label>Nombre</label><input id="cNombre"></div>
+        </div>
+        <div class="dos">
+          <div><label>Edad aprox. (meses)</label><input id="cEdad" type="number" inputmode="numeric"></div>
+          <div><label>o Fecha de nacimiento</label><input id="cNac" type="date"></div>
+        </div>
+        <div id="cReproBox" class="oculto">
+          <div class="dos">
+            <div><label>Estado reproductivo</label><select id="cRepro"><option value="">Sin dato</option><option>Preñada</option><option>Vacía</option><option>Parida</option></select></div>
+            <div id="cMesesBox" class="oculto"><label>Meses de preñez</label><input id="cMeses" type="number" inputmode="decimal" placeholder="Ej: 4"></div>
+          </div>
+        </div>
+        <div class="dos">
+          <div><label>Madre (arete)</label><input id="cMadre"></div>
+          <div><label>Costo compra ($)</label><input id="cCosto" type="number" inputmode="decimal"></div>
+        </div>
+        <label>Notas</label><input id="cNotas">
+        <button class="btn verde" id="cGuardar">Guardar y siguiente ➜</button>
+        <div class="sub" id="cMsg" style="margin-top:8px;text-align:center"></div>
+      </div>
+      <h3>Registrados en esta sesión: <span id="cCuenta">0</span></h3>
+      <div id="cLista"></div>
+    </div>
+
+    <!-- Importar Excel -->
+    <div id="panelExcel" class="oculto" style="margin-top:12px">
+      <div class="card">
+        <b>1. Descarga la plantilla</b>
+        <div class="sub" style="margin-top:4px">Llénala en Excel (PC o teléfono): una fila por animal. Solo el arete es obligatorio.</div>
+        <button class="btn" id="btnPlantilla">📄 Descargar plantilla de Excel</button>
+      </div>
+      <div class="card">
+        <b>2. Sube el archivo lleno</b>
+        <div class="sub" style="margin-top:4px">Acepta .xlsx o .csv</div>
+        <input type="file" id="archivoImp" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" style="margin-top:8px">
+      </div>
+      <div id="impResumen"></div>
+      <button class="btn verde oculto" id="btnImportar">Importar animales</button>
+      <div id="impPrevia" style="margin-top:10px;overflow-x:auto"></div>
+    </div>
+  </section>
+
+  <!-- ---------- REPORTES ---------- -->
+  <section class="vista" id="v-reportes">
+    <h2>📊 Reportes en Excel</h2>
+    <div class="card">
+      <b>Período</b>
+      <div class="dos" style="margin-top:8px">
+        <button class="btn gris peq" data-per="mes">Este mes</button>
+        <button class="btn gris peq" data-per="30">Últimos 30 días</button>
+        <button class="btn gris peq" data-per="ano">Este año</button>
+        <button class="btn gris peq" data-per="todo">Todo</button>
+      </div>
+      <div class="dos">
+        <div><label>Desde</label><input id="rDesde" type="date"></div>
+        <div><label>Hasta</label><input id="rHasta" type="date"></div>
+      </div>
+      <div class="dos">
+        <div><label>Lote</label><select id="rLote"></select></div>
+        <div><label>Animales</label><select id="rEstado"><option value="activo">Solo activos</option><option value="">Todos (incluye vendidos y muertos)</option></select></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="fila"><b>Hojas del reporte</b><button class="btn gris peq" id="rTodas">Marcar todas</button></div>
+      <div id="rHojas" style="margin-top:8px"></div>
+    </div>
+    <button class="btn verde" id="btnGenerar">📥 Generar Excel</button>
+    <button class="btn oculto" id="btnCompartir">📤 Compartir (WhatsApp, correo...)</button>
+    <div class="sub" id="rEstadoTxt" style="margin-top:10px;text-align:center"></div>
+  </section>
+
+  <!-- ---------- SANIDAD ---------- -->
   <section class="vista" id="v-sanidad">
     <div class="fila"><h2>Sanidad</h2><button class="btn verde peq" id="btnNuevaSanidad">+ Registro</button></div>
     <div class="stats" id="resumenSanidad"></div>
@@ -435,12 +540,14 @@ let detalleId = null;
 function ir(v) {
   document.querySelectorAll(".vista").forEach(s => s.classList.remove("activa"));
   $("v-" + v).classList.add("activa");
-  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("activo", b.dataset.v === v || (v === "detalle" && b.dataset.v === "animales")));
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("activo", b.dataset.v === v || ((v === "detalle" || v === "carga") && b.dataset.v === "animales")));
   if (v === "animales") renderAnimales();
   if (v === "lotes") renderLotes();
   if (v === "repro") renderRepro();
   if (v === "sanidad") renderSanidad();
   if (v === "ventas") renderVentas();
+  if (v === "reportes") prepararReportes();
+  if (v === "carga") prepararCarga();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => ir(b.dataset.v));
@@ -513,6 +620,7 @@ async function alDesconectar() {
   $("punto").classList.remove("ok"); $("btnDes").classList.add("oculto");
   pesoActual = null; estable = false; ultimas = [];
   $("peso").textContent = "----"; $("estab").textContent = "—"; $("estab").classList.remove("si");
+  $("cPeso").textContent = "----"; $("cEstab").textContent = "—"; $("cEstab").classList.remove("si");
   actualizarBotonGuardar();
   if (desconexionManual) {
     $("txtEstado").textContent = "Báscula desconectada";
@@ -537,6 +645,9 @@ function alRecibir(ev) {
   $("estab").classList.toggle("si", estable);
   if (p <= 0) $("resultado").style.display = "none";
   actualizarBotonGuardar();
+  $("cPeso").textContent = num(p, 0);
+  $("cEstab").textContent = estable ? "✔ ESTABLE" : "Moviéndose...";
+  $("cEstab").classList.toggle("si", estable);
 }
 
 // ======================================================================
@@ -1283,6 +1394,803 @@ function formMuerte(id) {
     cerrarModal();
   };
 }
+
+// ======================================================================
+//  GENERADOR DE EXCEL (.xlsx) — sin librerías externas, funciona sin internet
+// ======================================================================
+const XL = (() => {
+  const T = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; T[n] = c >>> 0; }
+  const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const x = v => String(v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const col = n => { let s = ""; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); } return s; };
+  const ref = (r, c) => col(c) + (r + 1);
+
+  function zip(files) {
+    const enc = new TextEncoder(), partes = [], central = []; let off = 0;
+    const d = new Date();
+    const dt = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    const tm = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+    for (const f of files) {
+      const nb = enc.encode(f.name), crc = crc32(f.data), n = f.data.length;
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+      h.setUint16(10, tm, true); h.setUint16(12, dt, true); h.setUint32(14, crc, true); h.setUint32(18, n, true); h.setUint32(22, n, true);
+      h.setUint16(26, nb.length, true); h.setUint16(28, 0, true);
+      partes.push(new Uint8Array(h.buffer), nb, f.data);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+      c.setUint16(12, tm, true); c.setUint16(14, dt, true); c.setUint32(16, crc, true); c.setUint32(20, n, true); c.setUint32(24, n, true);
+      c.setUint16(28, nb.length, true); c.setUint32(42, off, true);
+      central.push(new Uint8Array(c.buffer), nb);
+      off += 30 + nb.length + n;
+    }
+    const tam = central.reduce((t, a) => t + a.length, 0);
+    const e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, tam, true); e.setUint32(16, off, true);
+    return new Blob([...partes, ...central, new Uint8Array(e.buffer)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  }
+
+  class Estilos {
+    constructor() {
+      this.fonts = ['<font><sz val="11"/><name val="Calibri"/></font>'];
+      this.fills = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>'];
+      this.borders = ['<border><left/><right/><top/><bottom/><diagonal/></border>'];
+      this.numFmts = []; this.fmtIds = {}; this.cache = {};
+      this.xfs = ['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'];
+    }
+    idx(a, s) { let i = a.indexOf(s); if (i < 0) { a.push(s); i = a.length - 1; } return i; }
+    get(o = {}) {
+      const k = JSON.stringify(o); if (k in this.cache) return this.cache[k];
+      const font = this.idx(this.fonts, `<font>${o.b ? "<b/>" : ""}${o.i ? "<i/>" : ""}<sz val="${o.sz || 11}"/><color rgb="FF${o.color || "1F2D24"}"/><name val="Calibri"/></font>`);
+      const fill = o.fill ? this.idx(this.fills, `<fill><patternFill patternType="solid"><fgColor rgb="FF${o.fill}"/><bgColor indexed="64"/></patternFill></fill>`) : 0;
+      const bc = "FFCFDAD3";
+      const border = o.borde ? this.idx(this.borders, `<border><left style="thin"><color rgb="${bc}"/></left><right style="thin"><color rgb="${bc}"/></right><top style="thin"><color rgb="${bc}"/></top><bottom style="thin"><color rgb="${bc}"/></bottom><diagonal/></border>`) : 0;
+      let fmt = 0;
+      if (o.fmt) {
+        if (!(o.fmt in this.fmtIds)) { const id = 164 + this.numFmts.length; this.numFmts.push(`<numFmt numFmtId="${id}" formatCode="${x(o.fmt)}"/>`); this.fmtIds[o.fmt] = id; }
+        fmt = this.fmtIds[o.fmt];
+      }
+      const al = `<alignment${o.h ? ` horizontal="${o.h}"` : ""} vertical="center"${o.wrap ? ' wrapText="1"' : ""}/>`;
+      this.xfs.push(`<xf numFmtId="${fmt}" fontId="${font}" fillId="${fill}" borderId="${border}" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">${al}</xf>`);
+      return this.cache[k] = this.xfs.length - 1;
+    }
+    xml() {
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+        (this.numFmts.length ? `<numFmts count="${this.numFmts.length}">${this.numFmts.join("")}</numFmts>` : "") +
+        `<fonts count="${this.fonts.length}">${this.fonts.join("")}</fonts><fills count="${this.fills.length}">${this.fills.join("")}</fills>` +
+        `<borders count="${this.borders.length}">${this.borders.join("")}</borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
+        `<cellXfs count="${this.xfs.length}">${this.xfs.join("")}</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+    }
+  }
+
+  class Hoja {
+    constructor(nombre, tab) {
+      this.nombre = nombre.replace(/[\\\/\?\*\[\]:]/g, "-").slice(0, 31); this.tab = tab;
+      this.celdas = new Map(); this.anchos = []; this.altos = {}; this.merges = []; this.freeze = 0; this.filtro = null; this.barras = []; this.maxR = 0; this.maxC = 0;
+    }
+    set(r, c, v, s) { this.celdas.set(r * 1000 + c, { v, s }); if (r > this.maxR) this.maxR = r; if (c > this.maxC) this.maxC = c; }
+    unir(r1, c1, r2, c2) { if (r1 !== r2 || c1 !== c2) this.merges.push(ref(r1, c1) + ":" + ref(r2, c2)); }
+    barra(r1, r2, c, color) { if (r2 >= r1) this.barras.push({ sq: ref(r1, c) + ":" + ref(r2, c), color }); }
+    xml() {
+      const filas = [];
+      for (let r = 0; r <= this.maxR; r++) {
+        const cs = [];
+        for (let c = 0; c <= this.maxC; c++) {
+          const k = this.celdas.get(r * 1000 + c); if (!k) continue;
+          const R = ref(r, c), s = k.s ? ` s="${k.s}"` : ""; let v = k.v;
+          if (v instanceof Date) v = v.getTime() / 86400000 + 25569 - v.getTimezoneOffset() / 1440;
+          if (v == null || v === "" || (typeof v === "number" && !isFinite(v))) cs.push(`<c r="${R}"${s}/>`);
+          else if (typeof v === "number") cs.push(`<c r="${R}"${s}><v>${v}</v></c>`);
+          else cs.push(`<c r="${R}"${s} t="inlineStr"><is><t xml:space="preserve">${x(v)}</t></is></c>`);
+        }
+        if (cs.length || this.altos[r]) filas.push(`<row r="${r + 1}"${this.altos[r] ? ` ht="${this.altos[r]}" customHeight="1"` : ""}>${cs.join("")}</row>`);
+      }
+      const cols = this.anchos.length ? "<cols>" + this.anchos.map((w, i) => w ? `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>` : "").join("") + "</cols>" : "";
+      const pane = this.freeze ? `<pane ySplit="${this.freeze}" topLeftCell="A${this.freeze + 1}" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A${this.freeze + 1}" sqref="A${this.freeze + 1}"/>` : "";
+      const barras = this.barras.map((b, i) => `<conditionalFormatting sqref="${b.sq}"><cfRule type="dataBar" priority="${i + 1}"><dataBar><cfvo type="min"/><cfvo type="max"/><color rgb="FF${b.color}"/></dataBar></cfRule></conditionalFormatting>`).join("");
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">` +
+        `<sheetPr><tabColor rgb="FF${this.tab}"/><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:${ref(this.maxR, this.maxC)}"/>` +
+        `<sheetViews><sheetView workbookViewId="0" showGridLines="0" zoomScale="100">${pane}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/>${cols}` +
+        `<sheetData>${filas.join("")}</sheetData>${this.filtro ? `<autoFilter ref="${this.filtro}"/>` : ""}` +
+        (this.merges.length ? `<mergeCells count="${this.merges.length}">${this.merges.map(m => `<mergeCell ref="${m}"/>`).join("")}</mergeCells>` : "") +
+        `${barras}<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
+    }
+  }
+
+  class Libro {
+    constructor() { this.est = new Estilos(); this.hojas = []; }
+    hoja(n, tab) { const h = new Hoja(n, tab); this.hojas.push(h); return h; }
+    blob() {
+      const enc = new TextEncoder(), f = [], add = (n, t) => f.push({ name: n, data: enc.encode(t) });
+      const hs = this.hojas, X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+      const sheetsXml = hs.map(h => h.xml());
+      add("[Content_Types].xml", `${X}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${hs.map((h, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`);
+      add("_rels/.rels", `${X}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`);
+      const nombres = hs.map((h, i) => h.filtro ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${i}" hidden="1">'${x(h.nombre.replace(/'/g, "''"))}'!${h.filtro.replace(/([A-Z]+)(\d+)/g, "$$$1$$$2")}</definedName>` : "").join("");
+      add("xl/workbook.xml", `${X}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView activeTab="0"/></bookViews><sheets>${hs.map((h, i) => `<sheet name="${x(h.nombre)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets>${nombres ? `<definedNames>${nombres}</definedNames>` : ""}</workbook>`);
+      add("xl/_rels/workbook.xml.rels", `${X}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${hs.map((h, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}<Relationship Id="rId${hs.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`);
+      add("xl/styles.xml", this.est.xml());
+      sheetsXml.forEach((t, i) => add(`xl/worksheets/sheet${i + 1}.xml`, t));
+      return zip(f);
+    }
+  }
+  return { Libro, col };
+})();
+
+// ---------- Diseño de las hojas del reporte ----------
+const PAL = { oscuro: "173524", medio: "1E6B3D", claro: "2E7D4F", cebra: "EEF6F0", verde: "C6EFCE", rojo: "FFC7CE", amarillo: "FFEB9C", naranja: "FCD5B4", kpi: "E3F1E7" };
+const FMT = { fecha: "dd/mm/yyyy", fechahora: "dd/mm/yyyy hh:mm", kg: '#,##0" kg"', gdp: '+0.00" kg/día";[Red]-0.00" kg/día";0.00" kg/día"', dif: '+#,##0" kg";[Red]-#,##0" kg";0" kg"', dinero: '"$"#,##0.00', num: "#,##0", dec: "#,##0.0", pct: "0%" };
+const aFecha = ms => ms ? new Date(ms) : null;
+
+function tablaExcel(libro, nombre, tab, titulo, subtitulo, cols, filas, op = {}) {
+  const h = libro.hoja(nombre, tab), E = libro.est, n = cols.length, ultima = n - 1;
+  cols.forEach((c, i) => h.anchos[i] = c.w || 14);
+  h.set(0, 0, titulo, E.get({ b: 1, sz: 18, color: "FFFFFF", fill: PAL.oscuro }));
+  for (let c = 1; c < n; c++) h.set(0, c, "", E.get({ fill: PAL.oscuro }));
+  h.unir(0, 0, 0, ultima); h.altos[0] = 34;
+  h.set(1, 0, subtitulo, E.get({ i: 1, sz: 10, color: "FFFFFF", fill: PAL.claro }));
+  for (let c = 1; c < n; c++) h.set(1, c, "", E.get({ fill: PAL.claro }));
+  h.unir(1, 0, 1, ultima); h.altos[1] = 20; h.altos[2] = 6;
+  const H = 3;
+  cols.forEach((c, i) => h.set(H, i, c.t, E.get({ b: 1, color: "FFFFFF", fill: PAL.medio, h: "center", wrap: 1, borde: 1 })));
+  h.altos[H] = 34;
+  if (!filas.length) {
+    h.set(H + 1, 0, "Sin registros con los filtros elegidos", E.get({ i: 1, color: "7A8A80", h: "center", borde: 1 }));
+    for (let c = 1; c < n; c++) h.set(H + 1, c, "", E.get({ borde: 1 }));
+    h.unir(H + 1, 0, H + 1, ultima); h.freeze = H + 1;
+    return h;
+  }
+  filas.forEach((f, i) => {
+    const r = H + 1 + i, resalte = op.resaltar ? op.resaltar(f, i) : null;
+    const fondo = resalte || (i % 2 ? PAL.cebra : "FFFFFF");
+    cols.forEach((c, j) => {
+      const tipo = c.tipo || "txt";
+      h.set(r, j, f[j], E.get({ fill: fondo, borde: 1, fmt: FMT[tipo], h: tipo === "txt" ? (c.h || "left") : (c.h || "right"), b: c.b ? 1 : 0, wrap: c.wrap ? 1 : 0 }));
+    });
+  });
+  const fin = H + filas.length;
+  h.freeze = H + 1;
+  h.filtro = `A${H + 1}:${XL.col(ultima)}${fin + 1}`;
+  (op.barras || []).forEach(([c, color]) => h.barra(H + 1, fin, c, color || "63BE7B"));
+  if (op.totales) {
+    const r = fin + 1;
+    cols.forEach((c, j) => h.set(r, j, op.totales[j] ?? "", E.get({ b: 1, color: "FFFFFF", fill: PAL.oscuro, fmt: FMT[c.tipo || "txt"], h: (c.tipo || "txt") === "txt" ? "left" : "right", borde: 1 })));
+    h.altos[r] = 24;
+  }
+  return h;
+}
+
+// ---------- Pantalla de reportes ----------
+const HOJAS_REP = [
+  ["resumen", "📈 Resumen general (indicadores y gráficas de barras)"], ["animales", "🐄 Animales (ficha completa)"],
+  ["pesadas", "⚖️ Pesadas (con diferencia y GDP)"], ["lotes", "📋 Lotes"], ["repro", "🧬 Eventos reproductivos"],
+  ["estrepro", "🤰 Estado reproductivo de hembras"], ["sanidad", "💉 Sanidad"], ["ventas", "💵 Ventas"],
+  ["muertes", "✝️ Muertes"], ["sesiones", "🗂️ Sesiones de pesaje por lote"]
+];
+let ultimoExcel = null;
+
+function prepararReportes() {
+  $("rLote").innerHTML = '<option value="">Todos los lotes</option>' + opcionesLote($("rLote").value, false).replace('<option value="">Crea un lote primero</option>', "");
+  if (!$("rHojas").innerHTML) {
+    $("rHojas").innerHTML = HOJAS_REP.map(([id, t]) => `<label class="chk" style="color:#e8f0ea;font-size:15px;margin:8px 0"><input type="checkbox" id="rh_${id}" checked> ${t}</label>`).join("");
+    periodo("mes");
+  }
+}
+function periodo(p) {
+  const hoy = new Date(); let d = null;
+  if (p === "mes") d = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  if (p === "30") d = new Date(Date.now() - 30 * DIA);
+  if (p === "ano") d = new Date(hoy.getFullYear(), 0, 1);
+  $("rDesde").value = d ? msAiso(d.getTime()) : "";
+  $("rHasta").value = p === "todo" ? "" : hoyISO();
+}
+document.querySelectorAll("[data-per]").forEach(b => b.onclick = () => periodo(b.dataset.per));
+$("btnReportes").onclick = () => ir("reportes");
+$("rTodas").onclick = () => HOJAS_REP.forEach(([id]) => $("rh_" + id).checked = true);
+
+$("btnGenerar").onclick = async () => {
+  $("btnGenerar").disabled = true; $("btnCompartir").classList.add("oculto");
+  $("rEstadoTxt").textContent = "Preparando datos...";
+  try {
+    const { blob, nombre, hojas } = await armarExcel();
+    ultimoExcel = new File([blob], nombre, { type: blob.type });
+    const url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    $("rEstadoTxt").innerHTML = `✔ <b>${esc(nombre)}</b> descargado (${hojas} hojas). Búscalo en <b>Descargas</b>.`;
+    if (navigator.canShare && navigator.canShare({ files: [ultimoExcel] })) $("btnCompartir").classList.remove("oculto");
+  } catch (e) { console.error(e); $("rEstadoTxt").textContent = "No se pudo generar: " + e.message; }
+  $("btnGenerar").disabled = false;
+};
+$("btnCompartir").onclick = async () => {
+  if (!ultimoExcel) return;
+  try { await navigator.share({ files: [ultimoExcel], title: ultimoExcel.name, text: "Reporte de la báscula ganadera" }); } catch (_) {}
+};
+
+async function armarExcel() {
+  const desde = $("rDesde").value ? new Date($("rDesde").value + "T00:00:00").getTime() : 0;
+  const hasta = $("rHasta").value ? new Date($("rHasta").value + "T23:59:59").getTime() : Infinity;
+  const loteF = $("rLote").value, soloAct = $("rEstado").value === "activo";
+  const incl = id => $("rh_" + id).checked;
+  if (!HOJAS_REP.some(([id]) => incl(id))) throw new Error("marca al menos una hoja");
+  const enRango = ms => ms != null && ms >= desde && ms <= hasta;
+  const ahora = Date.now();
+  const sub = `Período: ${desde ? fecha(desde) : "desde el inicio"} al ${hasta < Infinity ? fecha(hasta) : fecha(ahora)}   ·   Lote: ${loteF ? nombreLote(loteF) : "Todos"}   ·   Generado: ${new Date().toLocaleString("es-VE")}   ·   ${usuario}`;
+  const loteDe = a => a?.lote || "";
+  const okLote = id => !loteF || loteId(id) === loteF;
+  const loteId = id => loteDe(animales.get(id));
+
+  $("rEstadoTxt").textContent = "Leyendo pesadas...";
+  const sp = await getDocs(collection(db, "pesadas"));
+  const todasPes = sp.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.fechaMs - b.fechaMs);
+  let sesiones = [];
+  if (incl("sesiones")) { const ss = await getDocs(collection(db, "sesiones")); sesiones = ss.docs.map(d => ({ id: d.id, ...d.data() })); }
+  $("rEstadoTxt").textContent = "Construyendo el Excel...";
+
+  const anims = [...animales.values()].filter(a => (!loteF || a.lote === loteF) && (!soloAct || a.estado === "activo"))
+    .sort((a, b) => String(a.arete).localeCompare(String(b.arete), "es", { numeric: true }));
+  const activosLote = [...animales.values()].filter(a => a.estado === "activo" && (!loteF || a.lote === loteF));
+  const cuentaPes = {}; todasPes.forEach(p => cuentaPes[p.animalId] = (cuentaPes[p.animalId] || 0) + 1);
+  const pesPeriodo = todasPes.filter(p => enRango(p.fechaMs) && (!loteF || (p.lote || loteId(p.animalId)) === loteF));
+  const ventasLineas = [];
+  ventas.filter(v => enRango(v.fechaMs)).forEach(v => (v.animales || []).forEach(a => { if (!loteF || a.lote === loteF) ventasLineas.push({ v, a }); }));
+  const reproP = repro.filter(e => enRango(e.fechaMs) && okLote(e.animalId));
+  const sanP = sanidad.filter(r => enRango(r.fechaMs) && (!loteF || r.loteId === loteF || (r.animales || []).some(id => loteId(id) === loteF)));
+  const muertes = [...animales.values()].filter(a => a.estado === "muerto" && enRango(a.fechaBajaMs) && (!loteF || a.lote === loteF));
+  const prom = l => l.length ? l.reduce((t, v) => t + v, 0) / l.length : null;
+  const edadM = a => a.fechaNacMs ? Math.floor((ahora - a.fechaNacMs) / (30.44 * DIA)) : null;
+  const libro = new XL.Libro(), E = libro.est;
+
+  // ===== RESUMEN =====
+  if (incl("resumen")) {
+    const h = libro.hoja("Resumen", PAL.oscuro);
+    h.anchos = [2, 22, 22, 22, 22, 16, 16, 16, 16, 16];
+    const titulo = (r, t) => { h.set(r, 1, t, E.get({ b: 1, sz: 13, color: PAL.medio })); h.altos[r] = 26; };
+    h.set(0, 1, "BÁSCULA GANADERA — REPORTE GENERAL", E.get({ b: 1, sz: 20, color: "FFFFFF", fill: PAL.oscuro }));
+    for (let c = 2; c <= 9; c++) h.set(0, c, "", E.get({ fill: PAL.oscuro }));
+    h.unir(0, 1, 0, 9); h.altos[0] = 40;
+    h.set(1, 1, sub, E.get({ i: 1, sz: 10, color: "FFFFFF", fill: PAL.claro }));
+    for (let c = 2; c <= 9; c++) h.set(1, c, "", E.get({ fill: PAL.claro }));
+    h.unir(1, 1, 1, 9); h.altos[1] = 22;
+
+    const hembras = activosLote.filter(a => a.sexo === "Hembra");
+    const conPeso = activosLote.filter(a => a.pesoActual > 0);
+    const listos = activosLote.filter(a => lotes.get(a.lote)?.pesoObjetivo && a.pesoActual >= lotes.get(a.lote).pesoObjetivo);
+    const kgVend = ventasLineas.reduce((t, l) => t + (l.a.peso || 0), 0);
+    const ingreso = ventasLineas.reduce((t, l) => t + (l.a.peso || 0) * (l.v.precioKg || 0), 0);
+    const tarjetas = [
+      ["REBAÑO", [["Animales activos", activosLote.length, "num"], ["Hembras", hembras.length, "num"], ["Machos", activosLote.filter(a => a.sexo === "Macho").length, "num"], ["Peso promedio", prom(conPeso.map(a => a.pesoActual)), "kg"]]],
+      ["CRECIMIENTO", [["GDP promedio", prom(activosLote.filter(a => a.gdpTotal != null).map(a => a.gdpTotal)), "gdp"], ["Pesadas en el período", pesPeriodo.length, "num"], ["Kg en pie (total)", conPeso.reduce((t, a) => t + a.pesoActual, 0), "kg"], ["Listos para venta", listos.length, "num"]]],
+      ["VENTAS DEL PERÍODO", [["Animales vendidos", ventasLineas.length, "num"], ["Kg vendidos", kgVend, "kg"], ["Ingresos", ingreso, "dinero"], ["Precio promedio por kg", kgVend ? ingreso / kgVend : null, "dinero"]]],
+      ["REPRODUCCIÓN Y SANIDAD", [["Partos en el período", reproP.filter(e => e.tipo === "parto").length, "num"], ["Hembras preñadas hoy", hembras.filter(a => estadoRepro(a.id).estado === "Preñada").length, "num"], ["Costo de sanidad", sanP.reduce((t, r) => t + (r.costo || 0), 0), "dinero"], ["Muertes en el período", muertes.length, "num"]]]
+    ];
+    let r = 3;
+    tarjetas.forEach(([sec, items]) => {
+      titulo(r, sec); r++;
+      items.forEach(([lab, val, tipo], i) => {
+        h.set(r, 1 + i, lab, E.get({ b: 1, sz: 9, color: "4B6B57", fill: PAL.kpi, h: "center" }));
+        h.set(r + 1, 1 + i, val ?? "—", E.get({ b: 1, sz: 20, color: PAL.medio, fill: PAL.kpi, h: "center", fmt: FMT[tipo] }));
+      });
+      h.altos[r] = 20; h.altos[r + 1] = 38; h.altos[r + 2] = 8;
+      r += 3;
+    });
+
+    // Tabla por lote con barras
+    r += 1; titulo(r, "RESUMEN POR LOTE"); r++;
+    const cab = ["Lote", "Animales", "Peso prom.", "Peso mín.", "Peso máx.", "GDP prom.", "Listos venta", "Kg en pie", "Potrero"];
+    const tipos = ["txt", "num", "kg", "kg", "kg", "gdp", "num", "kg", "txt"];
+    // usamos columnas B..J en orden visual
+    const orden = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    cab.forEach((t, i) => h.set(r, orden[i], t, E.get({ b: 1, color: "FFFFFF", fill: PAL.medio, h: "center", wrap: 1, borde: 1 })));
+    h.altos[r] = 30; const ini = r + 1;
+    const ls = [...lotes.values()].filter(l => !loteF || l.id === loteF).sort((a, b) => a.nombre.localeCompare(b.nombre));
+    ls.forEach((l, i) => {
+      r++;
+      const an = [...animales.values()].filter(a => a.estado === "activo" && a.lote === l.id), pw = an.filter(a => a.pesoActual > 0).map(a => a.pesoActual);
+      const vals = [l.nombre, an.length, prom(pw), pw.length ? Math.min(...pw) : null, pw.length ? Math.max(...pw) : null,
+        prom(an.filter(a => a.gdpTotal != null).map(a => a.gdpTotal)), l.pesoObjetivo ? an.filter(a => a.pesoActual >= l.pesoObjetivo).length : null,
+        pw.reduce((t, v) => t + v, 0), nombrePotrero(l.potrero)];
+      vals.forEach((v, j) => h.set(r, orden[j], v ?? "", E.get({ fill: i % 2 ? PAL.cebra : "FFFFFF", borde: 1, fmt: FMT[tipos[j]], h: tipos[j] === "txt" ? "left" : "right", b: j === 0 ? 1 : 0 })));
+    });
+    if (ls.length) { h.barra(ini, r, 3, "63BE7B"); h.barra(ini, r, 6, "5A8AC6"); h.barra(ini, r, 8, "F4B183"); }
+    else { r++; h.set(r, 1, "No hay lotes creados", E.get({ i: 1, color: "7A8A80" })); }
+
+    // Movimiento por mes
+    r += 2; titulo(r, "MOVIMIENTO POR MES"); r++;
+    const meses = {};
+    const mk = ms => { const d = new Date(ms); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
+    const m = k => meses[k] ||= { pes: 0, kgv: 0, ing: 0, san: 0, partos: 0, muertes: 0 };
+    pesPeriodo.forEach(p => m(mk(p.fechaMs)).pes++);
+    ventasLineas.forEach(l => { const o = m(mk(l.v.fechaMs)); o.kgv += l.a.peso || 0; o.ing += (l.a.peso || 0) * (l.v.precioKg || 0); });
+    sanP.forEach(s => m(mk(s.fechaMs)).san += s.costo || 0);
+    reproP.filter(e => e.tipo === "parto").forEach(e => m(mk(e.fechaMs)).partos++);
+    muertes.forEach(a => m(mk(a.fechaBajaMs)).muertes++);
+    const cabM = ["Mes", "Pesadas", "Kg vendidos", "Ingresos", "Costo sanidad", "Partos", "Muertes"], tipM = ["txt", "num", "kg", "dinero", "dinero", "num", "num"];
+    cabM.forEach((t, i) => h.set(r, 1 + i, t, E.get({ b: 1, color: "FFFFFF", fill: PAL.medio, h: "center", wrap: 1, borde: 1 })));
+    h.altos[r] = 30; const iniM = r + 1;
+    const nombresMes = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    Object.keys(meses).sort().forEach((k, i) => {
+      r++; const o = meses[k], [yy, mm] = k.split("-");
+      [nombresMes[+mm - 1] + " " + yy, o.pes, o.kgv, o.ing, o.san, o.partos, o.muertes].forEach((v, j) =>
+        h.set(r, 1 + j, v, E.get({ fill: i % 2 ? PAL.cebra : "FFFFFF", borde: 1, fmt: FMT[tipM[j]], h: j ? "right" : "left", b: j === 0 ? 1 : 0 })));
+    });
+    if (r >= iniM) { h.barra(iniM, r, 4, "63BE7B"); h.barra(iniM, r, 2, "5A8AC6"); }
+    else { r++; h.set(r, 1, "Sin movimiento en el período", E.get({ i: 1, color: "7A8A80" })); }
+  }
+
+  // ===== ANIMALES =====
+  if (incl("animales")) {
+    const cols = [
+      { t: "Arete", w: 11, b: 1 }, { t: "Nombre", w: 14 }, { t: "Sexo", w: 9 }, { t: "Raza", w: 12 }, { t: "Edad (meses)", w: 9, tipo: "num" },
+      { t: "Lote", w: 14 }, { t: "Potrero", w: 13 }, { t: "Origen", w: 10 }, { t: "Costo compra", w: 12, tipo: "dinero" }, { t: "Madre", w: 10 }, { t: "Padre", w: 10 },
+      { t: "Estado", w: 10 }, { t: "Peso inicial", w: 11, tipo: "kg" }, { t: "Fecha peso inicial", w: 12, tipo: "fecha" }, { t: "Peso actual", w: 11, tipo: "kg", b: 1 },
+      { t: "Último pesaje", w: 12, tipo: "fecha" }, { t: "Kg ganados", w: 11, tipo: "dif" }, { t: "Días en control", w: 10, tipo: "num" }, { t: "GDP total", w: 13, tipo: "gdp", b: 1 },
+      { t: "GDP última", w: 13, tipo: "gdp" }, { t: "Peso objetivo", w: 11, tipo: "kg" }, { t: "% del objetivo", w: 10, tipo: "pct" }, { t: "Listo venta", w: 9, h: "center" },
+      { t: "Estado reproductivo", w: 13 }, { t: "Parto estimado", w: 12, tipo: "fecha" }, { t: "En retiro hasta", w: 12, tipo: "fecha" }, { t: "N° pesadas", w: 9, tipo: "num" },
+      { t: "Fecha de baja", w: 12, tipo: "fecha" }, { t: "Causa / detalle de baja", w: 20 }, { t: "Notas", w: 24, wrap: 1 }
+    ];
+    const filas = anims.map(a => {
+      const obj = lotes.get(a.lote)?.pesoObjetivo, rp = a.sexo === "Hembra" ? estadoRepro(a.id) : null, ret = retiroHasta(a.id);
+      const ganado = a.pesoActual != null && a.pesoInicial != null ? a.pesoActual - a.pesoInicial : null;
+      const dias = a.fechaUltPeso && a.fechaPesoInicial ? Math.round((a.fechaUltPeso - a.fechaPesoInicial) / DIA) : null;
+      return [a.arete, a.nombre || "", a.sexo || "", a.raza || "", edadM(a), nombreLote(a.lote), nombrePotrero(lotes.get(a.lote)?.potrero), a.origen || "", a.costoCompra ?? null,
+        a.madre || "", a.padre || "", a.estado, a.pesoInicial ?? null, aFecha(a.fechaPesoInicial), a.pesoActual ?? null, aFecha(a.fechaUltPeso), ganado, dias,
+        a.gdpTotal ?? null, a.gdpUltima ?? null, obj || null, obj && a.pesoActual ? a.pesoActual / obj : null,
+        obj ? (a.pesoActual >= obj ? "SÍ" : "No") : "", rp ? rp.estado : "", aFecha(rp?.partoEst), aFecha(ret), cuentaPes[a.id] || 0,
+        a.estado !== "activo" ? aFecha(a.fechaBajaMs) : null, a.estado === "muerto" ? (a.causaBaja || "") : a.estado === "vendido" ? (a.precioVentaKg ? "Vendido a $" + num(a.precioVentaKg, 2) + "/kg" : "Vendido") : "", a.notas || ""];
+    });
+    const pr = i => prom(filas.map(f => f[i]).filter(v => typeof v === "number"));
+    tablaExcel(libro, "Animales", PAL.medio, "ANIMALES — FICHA COMPLETA", sub, cols, filas, {
+      resaltar: f => f[11] === "muerto" ? "E7E6E6" : f[11] === "vendido" ? "DDEBF7" : f[25] ? PAL.rojo : f[22] === "SÍ" ? PAL.verde : (typeof f[18] === "number" && f[18] < 0) ? PAL.amarillo : null,
+      barras: [[14, "63BE7B"], [18, "5A8AC6"]],
+      totales: [`${filas.length} animales`, "", "", "", pr(4), "", "", "", "", "", "", "PROMEDIOS →", pr(12), "", pr(14), "", pr(16), pr(17), pr(18), pr(19), "", pr(21), filas.filter(f => f[22] === "SÍ").length + " listos", "", "", "", "", "", "", ""]
+    });
+  }
+
+  // ===== PESADAS =====
+  if (incl("pesadas")) {
+    const previa = {}, filas = [];
+    for (const p of todasPes) {
+      const ant = previa[p.animalId]; previa[p.animalId] = p;
+      if (!enRango(p.fechaMs) || (loteF && (p.lote || loteId(p.animalId)) !== loteF)) continue;
+      const a = animales.get(p.animalId), dif = ant ? p.peso - ant.peso : null, d = ant ? (p.fechaMs - ant.fechaMs) / DIA : null;
+      filas.push([aFecha(p.fechaMs), p.arete, a?.nombre || "", nombreLote(p.lote || a?.lote), p.peso, ant ? ant.peso : null, dif, d != null ? Math.round(d) : null,
+        d >= 1 ? dif / d : null, p.sesionId ? "Sesión de lote" : "Individual", p.usuario || ""]);
+    }
+    filas.reverse();
+    const cols = [{ t: "Fecha y hora", w: 16, tipo: "fechahora" }, { t: "Arete", w: 10, b: 1 }, { t: "Nombre", w: 14 }, { t: "Lote", w: 14 }, { t: "Peso", w: 11, tipo: "kg", b: 1 },
+      { t: "Peso anterior", w: 11, tipo: "kg" }, { t: "Diferencia", w: 11, tipo: "dif" }, { t: "Días desde la anterior", w: 11, tipo: "num" }, { t: "GDP", w: 13, tipo: "gdp", b: 1 },
+      { t: "Tipo de pesaje", w: 14 }, { t: "Usuario", w: 22 }];
+    tablaExcel(libro, "Pesadas", "2E86DE", "PESADAS DEL PERÍODO", sub, cols, filas, {
+      resaltar: f => typeof f[6] === "number" && f[6] < 0 ? PAL.rojo : null, barras: [[4, "5A8AC6"]],
+      totales: [`${filas.length} pesadas`, "", "", "PROMEDIO →", prom(filas.map(f => f[4])), "", prom(filas.map(f => f[6]).filter(v => v != null)), "", prom(filas.map(f => f[8]).filter(v => v != null)), "", ""]
+    });
+  }
+
+  // ===== LOTES =====
+  if (incl("lotes")) {
+    const filas = [...lotes.values()].filter(l => !loteF || l.id === loteF).sort((a, b) => a.nombre.localeCompare(b.nombre)).map(l => {
+      const an = [...animales.values()].filter(a => a.estado === "activo" && a.lote === l.id), pw = an.filter(a => a.pesoActual > 0).map(a => a.pesoActual);
+      const pot = potreros.get(l.potrero), kgPie = pw.reduce((t, v) => t + v, 0);
+      return [l.nombre, pot?.nombre || "", pot?.hectareas ?? null, an.length, an.filter(a => a.sexo === "Hembra").length, an.filter(a => a.sexo === "Macho").length,
+        prom(pw), pw.length ? Math.min(...pw) : null, pw.length ? Math.max(...pw) : null, prom(an.filter(a => a.gdpTotal != null).map(a => a.gdpTotal)),
+        l.pesoObjetivo ?? null, l.pesoObjetivo ? an.filter(a => a.pesoActual >= l.pesoObjetivo).length : null, kgPie, pot?.hectareas ? kgPie / pot.hectareas : null];
+    });
+    const cols = [{ t: "Lote", w: 16, b: 1 }, { t: "Potrero", w: 14 }, { t: "Hectáreas", w: 10, tipo: "dec" }, { t: "Animales", w: 10, tipo: "num" }, { t: "Hembras", w: 9, tipo: "num" },
+      { t: "Machos", w: 9, tipo: "num" }, { t: "Peso prom.", w: 11, tipo: "kg", b: 1 }, { t: "Peso mín.", w: 11, tipo: "kg" }, { t: "Peso máx.", w: 11, tipo: "kg" },
+      { t: "GDP prom.", w: 13, tipo: "gdp", b: 1 }, { t: "Peso objetivo", w: 11, tipo: "kg" }, { t: "Listos venta", w: 10, tipo: "num" }, { t: "Kg en pie", w: 12, tipo: "kg" }, { t: "Carga (kg/ha)", w: 12, tipo: "num" }];
+    tablaExcel(libro, "Lotes", "7A6420", "LOTES", sub, cols, filas, {
+      barras: [[6, "63BE7B"], [9, "5A8AC6"], [12, "F4B183"]],
+      totales: [`${filas.length} lotes`, "", filas.reduce((t, f) => t + (f[2] || 0), 0), filas.reduce((t, f) => t + f[3], 0), filas.reduce((t, f) => t + f[4], 0), filas.reduce((t, f) => t + f[5], 0),
+        "", "", "", "", "", filas.reduce((t, f) => t + (f[11] || 0), 0), filas.reduce((t, f) => t + f[12], 0), ""]
+    });
+  }
+
+  // ===== REPRODUCCIÓN =====
+  if (incl("repro")) {
+    const filas = [...reproP].sort((a, b) => b.fechaMs - a.fechaMs).map(e => {
+      const a = animales.get(e.animalId);
+      return [aFecha(e.fechaMs), e.arete, a?.nombre || "", nombreLote(a?.lote), TIPOS[e.tipo] || e.tipo, e.toro || "", e.resultado || "", e.cria || "", e.criaSexo || "", e.notas || "", e.usuario || ""];
+    });
+    const cols = [{ t: "Fecha", w: 12, tipo: "fecha" }, { t: "Arete", w: 10, b: 1 }, { t: "Nombre", w: 14 }, { t: "Lote", w: 14 }, { t: "Evento", w: 16, b: 1 }, { t: "Toro / semen", w: 14 },
+      { t: "Resultado", w: 11 }, { t: "Cría (arete)", w: 11 }, { t: "Sexo cría", w: 10 }, { t: "Notas", w: 26, wrap: 1 }, { t: "Usuario", w: 22 }];
+    const color = { Parto: PAL.verde, Aborto: PAL.rojo, "Palpación": PAL.amarillo };
+    tablaExcel(libro, "Reproducción", "8E44AD", "EVENTOS REPRODUCTIVOS", sub, cols, filas, {
+      resaltar: f => f[4] === "Palpación" && f[6] === "Preñada" ? PAL.verde : color[f[4]] || null,
+      totales: [`${filas.length} eventos`, "", "", "", `${filas.filter(f => f[4] === "Parto").length} partos`, "", `${filas.filter(f => f[6] === "Preñada").length} preñadas`, "", "", "", ""]
+    });
+  }
+  if (incl("estrepro")) {
+    const filas = anims.filter(a => a.sexo === "Hembra" && a.estado === "activo").map(a => {
+      const rp = estadoRepro(a.id), ev = repro.filter(e => e.animalId === a.id).sort((x, y) => y.fechaMs - x.fechaMs), u = ev[0];
+      const crias = [...animales.values()].filter(c => c.madre && String(c.madre).toLowerCase() === String(a.arete).toLowerCase()).length;
+      return [a.arete, a.nombre || "", nombreLote(a.lote), edadM(a), rp.estado, u ? TIPOS[u.tipo] : "", aFecha(u?.fechaMs), aFecha(rp.partoEst),
+        rp.partoEst ? Math.round((rp.partoEst - ahora) / DIA) : null, crias, ev.filter(e => e.tipo === "parto").length];
+    });
+    const cols = [{ t: "Arete", w: 10, b: 1 }, { t: "Nombre", w: 14 }, { t: "Lote", w: 14 }, { t: "Edad (meses)", w: 9, tipo: "num" }, { t: "Estado", w: 12, b: 1, h: "center" },
+      { t: "Último evento", w: 16 }, { t: "Fecha último evento", w: 12, tipo: "fecha" }, { t: "Parto estimado", w: 12, tipo: "fecha", b: 1 }, { t: "Días para el parto", w: 10, tipo: "num" },
+      { t: "Crías registradas", w: 10, tipo: "num" }, { t: "Partos registrados", w: 10, tipo: "num" }];
+    tablaExcel(libro, "Estado reproductivo", "8E44AD", "ESTADO REPRODUCTIVO DE LAS HEMBRAS (HOY)", sub, cols, filas, {
+      resaltar: f => typeof f[8] === "number" && f[8] <= 30 ? PAL.naranja : f[4] === "Preñada" ? PAL.verde : f[4] === "Vacía" ? PAL.amarillo : f[4] === "Servida" ? "DDEBF7" : null,
+      totales: [`${filas.length} hembras`, "", "", "", `${filas.filter(f => f[4] === "Preñada").length} preñadas`, `${filas.filter(f => f[4] === "Vacía").length} vacías`, "", "", "", filas.reduce((t, f) => t + f[9], 0), filas.reduce((t, f) => t + f[10], 0)]
+    });
+  }
+
+  // ===== SANIDAD =====
+  if (incl("sanidad")) {
+    const filas = [...sanP].sort((a, b) => b.fechaMs - a.fechaMs).map(r => {
+      const est = !r.proximaMs ? "" : proximaCumplida(r) ? "Cumplida" : r.proximaMs < ahora ? "VENCIDA" : "Pendiente";
+      return [aFecha(r.fechaMs), destinoSan(r), TIPOS_SAN[r.tipo] || r.tipo, r.producto, r.dosis || "", (r.animales || []).length, (r.aretes || []).join(", "),
+        r.retiroDias || 0, r.retiroDias ? aFecha(r.fechaMs + r.retiroDias * DIA) : null, aFecha(r.proximaMs), est, r.costo || 0, r.notas || "", r.usuario || ""];
+    });
+    const cols = [{ t: "Fecha", w: 12, tipo: "fecha" }, { t: "Aplicado a", w: 18, b: 1 }, { t: "Tipo", w: 15 }, { t: "Producto", w: 16, b: 1 }, { t: "Dosis", w: 10 },
+      { t: "N° animales", w: 9, tipo: "num" }, { t: "Aretes", w: 26, wrap: 1 }, { t: "Días de retiro", w: 9, tipo: "num" }, { t: "Libre de retiro", w: 12, tipo: "fecha" },
+      { t: "Próxima aplicación", w: 12, tipo: "fecha" }, { t: "Estado próxima", w: 12, h: "center", b: 1 }, { t: "Costo", w: 11, tipo: "dinero" }, { t: "Notas", w: 22, wrap: 1 }, { t: "Usuario", w: 22 }];
+    tablaExcel(libro, "Sanidad", "C0392B", "REGISTROS DE SANIDAD", sub, cols, filas, {
+      resaltar: f => f[10] === "VENCIDA" ? PAL.rojo : f[10] === "Pendiente" ? PAL.amarillo : f[10] === "Cumplida" ? PAL.verde : null,
+      barras: [[11, "F4B183"]],
+      totales: [`${filas.length} registros`, "", "", "", "", filas.reduce((t, f) => t + f[5], 0), "", "", "", "", `${filas.filter(f => f[10] === "VENCIDA").length} vencidas`, filas.reduce((t, f) => t + f[11], 0), "", ""]
+    });
+  }
+
+  // ===== VENTAS =====
+  if (incl("ventas")) {
+    const filas = [...ventasLineas].sort((a, b) => b.v.fechaMs - a.v.fechaMs).map(({ v, a }) =>
+      [aFecha(v.fechaMs), v.id.slice(-6).toUpperCase(), v.comprador || "", a.arete, nombreLote(a.lote), a.peso, v.precioKg, (a.peso || 0) * (v.precioKg || 0), v.notas || ""]);
+    const cols = [{ t: "Fecha", w: 12, tipo: "fecha" }, { t: "N° venta", w: 10, h: "center" }, { t: "Comprador", w: 20 }, { t: "Arete", w: 10, b: 1 }, { t: "Lote", w: 14 },
+      { t: "Peso", w: 11, tipo: "kg" }, { t: "Precio por kg", w: 12, tipo: "dinero" }, { t: "Monto", w: 14, tipo: "dinero", b: 1 }, { t: "Notas", w: 24, wrap: 1 }];
+    const kgT = filas.reduce((t, f) => t + (f[5] || 0), 0), totT = filas.reduce((t, f) => t + f[7], 0);
+    tablaExcel(libro, "Ventas", "27AE60", "VENTAS DEL PERÍODO", sub, cols, filas, {
+      barras: [[7, "63BE7B"], [5, "5A8AC6"]],
+      totales: [`${filas.length} animales`, "", `${new Set(filas.map(f => f[1])).size} ventas`, "", "TOTAL →", kgT, kgT ? totT / kgT : null, totT, ""]
+    });
+  }
+
+  // ===== MUERTES =====
+  if (incl("muertes")) {
+    const filas = muertes.sort((a, b) => b.fechaBajaMs - a.fechaBajaMs).map(a =>
+      [aFecha(a.fechaBajaMs), a.arete, a.nombre || "", a.sexo || "", nombreLote(a.lote), edadM(a), a.pesoActual ?? null, a.causaBaja || ""]);
+    const cols = [{ t: "Fecha", w: 12, tipo: "fecha" }, { t: "Arete", w: 10, b: 1 }, { t: "Nombre", w: 14 }, { t: "Sexo", w: 9 }, { t: "Lote", w: 14 },
+      { t: "Edad (meses)", w: 9, tipo: "num" }, { t: "Último peso", w: 11, tipo: "kg" }, { t: "Causa", w: 30, b: 1, wrap: 1 }];
+    tablaExcel(libro, "Muertes", "555555", "MUERTES DEL PERÍODO", sub, cols, filas, {
+      totales: [`${filas.length} muertes`, "", "", "", "", "", filas.reduce((t, f) => t + (f[6] || 0), 0), ""]
+    });
+  }
+
+  // ===== SESIONES =====
+  if (incl("sesiones")) {
+    const filas = sesiones.filter(x => enRango(x.inicioMs) && (!loteF || x.loteId === loteF)).sort((a, b) => b.inicioMs - a.inicioMs).map(x =>
+      [aFecha(x.inicioMs), nombreLote(x.loteId), x.cantidad, x.promedio, x.minimo, x.maximo, x.maximo - x.minimo, x.finMs ? Math.round((x.finMs - x.inicioMs) / 60000) : null, x.usuario || ""]);
+    const cols = [{ t: "Fecha y hora", w: 16, tipo: "fechahora" }, { t: "Lote", w: 16, b: 1 }, { t: "Animales pesados", w: 10, tipo: "num" }, { t: "Promedio", w: 11, tipo: "kg", b: 1 },
+      { t: "Mínimo", w: 11, tipo: "kg" }, { t: "Máximo", w: 11, tipo: "kg" }, { t: "Diferencia máx-mín", w: 11, tipo: "kg" }, { t: "Duración (min)", w: 10, tipo: "num" }, { t: "Usuario", w: 22 }];
+    tablaExcel(libro, "Sesiones de pesaje", "2E86DE", "SESIONES DE PESAJE POR LOTE", sub, cols, filas, {
+      barras: [[3, "63BE7B"]], totales: [`${filas.length} sesiones`, "", filas.reduce((t, f) => t + (f[2] || 0), 0), "", "", "", "", "", ""]
+    });
+  }
+
+  const nombre = `Reporte_Ganadero_${hoyISO()}${loteF ? "_" + nombreLote(loteF).replace(/[^\wáéíóúñÁÉÍÓÚÑ-]+/g, "_") : ""}.xlsx`;
+  return { blob: libro.blob(), nombre, hojas: libro.hojas.length };
+}
+
+// ======================================================================
+//  CARGA INICIAL DEL REBAÑO
+// ======================================================================
+const MES = 30.44 * DIA;
+let cargados = [];   // registrados en esta sesión: { animalId, pesadaId, eventoIds, arete }
+
+$("btnCarga").onclick = () => ir("carga");
+$("btnVolverCarga").onclick = () => ir("animales");
+$("tabManga").onclick = () => { $("panelManga").classList.remove("oculto"); $("panelExcel").classList.add("oculto"); $("tabManga").classList.remove("gris"); $("tabExcel").classList.add("gris"); };
+$("tabExcel").onclick = () => { $("panelExcel").classList.remove("oculto"); $("panelManga").classList.add("oculto"); $("tabExcel").classList.remove("gris"); $("tabManga").classList.add("gris"); };
+$("cConectar").onclick = () => $("btnCon").click();
+$("cUsarBascula").onchange = () => $("cPesoManualBox").classList.toggle("oculto", $("cUsarBascula").checked);
+$("cSexo").onchange = () => $("cReproBox").classList.toggle("oculto", $("cSexo").value !== "Hembra");
+$("cRepro").onchange = () => $("cMesesBox").classList.toggle("oculto", $("cRepro").value !== "Preñada");
+
+function prepararCarga() {
+  const sel = $("cLote").value;
+  $("cLote").innerHTML = opcionesLote(sel);
+  $("cReproBox").classList.toggle("oculto", $("cSexo").value !== "Hembra");
+  if (!$("cArete").value) $("cArete").value = siguienteArete();
+  pintarCargados();
+}
+
+function siguienteArete() {
+  const ult = cargados.length ? cargados[cargados.length - 1].arete : null;
+  if (ult && /^\d+$/.test(ult)) {
+    let n = parseInt(ult, 10) + 1;
+    while (buscarArete(String(n).padStart(ult.length, "0"))) n++;
+    return String(n).padStart(ult.length, "0");
+  }
+  return "";
+}
+
+// Crea el animal con su peso inicial y su estado reproductivo (para carga manual o importada)
+function registrarExistente(d) {
+  const ahora = Date.now();
+  const fPeso = d.fechaPeso || ahora;
+  const datos = {
+    arete: d.arete, nombre: d.nombre || "", sexo: d.sexo || "", raza: d.raza || "", fechaNacMs: d.fechaNacMs || null,
+    lote: d.lote || "", madre: d.madre || "", padre: d.padre || "", origen: d.origen || "", costoCompra: d.costoCompra ?? null,
+    notas: d.notas || "", estado: "activo", cargaInicial: true
+  };
+  if (d.peso > 0) Object.assign(datos, { pesoActual: d.peso, fechaUltPeso: fPeso, pesoInicial: d.peso, fechaPesoInicial: fPeso, gdpTotal: null, gdpUltima: null });
+  const a = crearAnimal(datos);
+  const reg = { animalId: a.id, arete: a.arete, pesadaId: null, eventoIds: [] };
+  if (d.peso > 0) {
+    const ref = doc(collection(db, "pesadas"));
+    setDoc(ref, { animalId: a.id, arete: a.arete, peso: d.peso, fechaMs: fPeso, lote: a.lote || "", sesionId: null, gdp: null, usuario, cargaInicial: true }).catch(errorGuardar);
+    reg.pesadaId = ref.id;
+  }
+  if (a.sexo === "Hembra" && d.repro) {
+    const evs = [];
+    if (d.repro === "Preñada") {
+      // Con meses de preñez se registra un servicio estimado (para calcular el parto) + palpación positiva
+      if (d.mesesPrenez > 0) evs.push({ tipo: "servicio", fechaMs: ahora - d.mesesPrenez * MES, toro: "", notas: `Servicio estimado (carga inicial: ${d.mesesPrenez} meses de preñez)` });
+      evs.push({ tipo: "palpacion", fechaMs: ahora, resultado: "Preñada", notas: "Carga inicial" });
+    } else if (d.repro === "Vacía") evs.push({ tipo: "palpacion", fechaMs: ahora, resultado: "Vacía", notas: "Carga inicial" });
+    else if (d.repro === "Parida") evs.push({ tipo: "parto", fechaMs: d.fechaParto || ahora, cria: "", criaSexo: "", notas: "Carga inicial" });
+    reg.eventoIds = evs.map(ev => {
+      const ref = doc(collection(db, "reproduccion"));
+      setDoc(ref, { animalId: a.id, arete: a.arete, usuario, creadoMs: ahora, ...ev }).catch(errorGuardar);
+      return ref.id;
+    });
+  }
+  return reg;
+}
+
+$("cGuardar").onclick = () => {
+  const arete = $("cArete").value.trim();
+  if (!arete) return alert("Escribe el arete.");
+  if (buscarArete(arete)) return alert("Ya existe un animal con el arete " + arete + ".");
+  let peso = null;
+  if ($("cUsarBascula").checked) {
+    if (pesoActual > 0) {
+      if (!estable && !confirm("El peso no está estable todavía. ¿Guardar " + num(pesoActual) + " kg de todas formas?")) return;
+      peso = pesoActual;
+    } else if (!confirm("No hay peso de la báscula. ¿Guardar el animal sin peso?")) return;
+  } else peso = Number($("cPesoManual").value) || null;
+  const edad = Number($("cEdad").value);
+  const fechaNacMs = isoAms($("cNac").value) || (edad > 0 ? Date.now() - edad * MES : null);
+  const reg = registrarExistente({
+    arete, nombre: $("cNombre").value.trim(), sexo: $("cSexo").value, raza: $("cRaza").value.trim(), lote: $("cLote").value,
+    origen: $("cOrigen").value, costoCompra: $("cCosto").value ? Number($("cCosto").value) : null, madre: $("cMadre").value.trim(),
+    notas: $("cNotas").value.trim(), fechaNacMs, peso,
+    repro: $("cSexo").value === "Hembra" ? $("cRepro").value : "", mesesPrenez: Number($("cMeses").value) || 0
+  });
+  cargados.push(reg);
+  $("cMsg").innerHTML = `✔ <b>${esc(arete)}</b> guardado${peso ? " con " + kg(peso) : ""}`;
+  ["cNombre", "cEdad", "cNac", "cMadre", "cCosto", "cNotas", "cPesoManual", "cMeses"].forEach(id => $(id).value = "");
+  $("cRepro").value = ""; $("cMesesBox").classList.add("oculto");
+  $("cArete").value = siguienteArete();
+  ultimas = []; estable = false;
+  pintarCargados();
+  $("cArete").focus();
+};
+
+function pintarCargados() {
+  $("cCuenta").textContent = cargados.length;
+  $("cLista").innerHTML = cargados.length ? "<table><tr><th>Arete</th><th>Peso</th><th>Lote</th><th></th></tr>" +
+    [...cargados].reverse().slice(0, 30).map(r => {
+      const a = animales.get(r.animalId);
+      return `<tr><td><b>${esc(r.arete)}</b></td><td>${kg(a?.pesoActual)}</td><td>${esc(nombreLote(a?.lote))}</td><td><button class="btn rojo peq" data-deshacer="${r.animalId}">Deshacer</button></td></tr>`;
+    }).join("") + "</table>" : '<div class="vacio">Todavía no has registrado animales en esta sesión.</div>';
+}
+$("cLista").onclick = e => {
+  const id = e.target.dataset.deshacer; if (!id) return;
+  const r = cargados.find(x => x.animalId === id);
+  if (!r || !confirm("¿Borrar el animal " + r.arete + " y sus datos de carga?")) return;
+  deleteDoc(doc(db, "animales", r.animalId)).catch(errorGuardar);
+  if (r.pesadaId) deleteDoc(doc(db, "pesadas", r.pesadaId)).catch(errorGuardar);
+  (r.eventoIds || []).forEach(id => deleteDoc(doc(db, "reproduccion", id)).catch(errorGuardar));
+  animales.delete(r.animalId);
+  cargados = cargados.filter(x => x !== r);
+  pintarCargados();
+};
+
+// ---------------- Plantilla de Excel ----------------
+const COLS_IMP = [
+  ["arete", "Arete *", 12, "101"], ["nombre", "Nombre", 14, "Lucero"], ["sexo", "Sexo (Hembra / Macho)", 14, "Hembra"],
+  ["raza", "Raza", 12, "Brahman"], ["fechanac", "Fecha de nacimiento (dd/mm/aaaa)", 16, "15/03/2023"], ["edad", "Edad aprox. (meses)", 11, ""],
+  ["lote", "Lote", 16, "Vacas paridas"], ["origen", "Origen (Nacido / Comprado)", 14, "Nacido"], ["costo", "Costo de compra ($)", 12, ""],
+  ["madre", "Madre (arete)", 11, ""], ["padre", "Padre (arete o toro)", 12, ""], ["peso", "Peso actual (kg)", 11, "420"],
+  ["fechapeso", "Fecha del peso (dd/mm/aaaa)", 15, ""], ["repro", "Estado reproductivo (Preñada / Vacía / Parida)", 18, "Preñada"],
+  ["meses", "Meses de preñez", 10, "4"], ["notas", "Notas", 24, ""]
+];
+$("btnPlantilla").onclick = () => {
+  const libro = new XL.Libro(), E = libro.est;
+  const h = libro.hoja("Animales", PAL.medio);
+  COLS_IMP.forEach(([, t, w], i) => { h.anchos[i] = w; h.set(0, i, t, E.get({ b: 1, color: "FFFFFF", fill: i === 0 ? "C0392B" : PAL.medio, h: "center", wrap: 1, borde: 1 })); });
+  h.altos[0] = 48; h.freeze = 1;
+  for (let r = 1; r <= 300; r++) COLS_IMP.forEach((c, i) => h.set(r, i, "", E.get({ borde: 1, fill: r % 2 ? "FFFFFF" : PAL.cebra, fmt: [0, 9, 10].includes(i) ? "@" : undefined })));   // arete, madre y padre como texto (no pierde ceros)
+  const ins = libro.hoja("Instrucciones", PAL.oscuro);
+  ins.anchos = [34, 70];
+  ins.set(0, 0, "CÓMO LLENAR LA PLANTILLA", E.get({ b: 1, sz: 16, color: "FFFFFF", fill: PAL.oscuro })); ins.set(0, 1, "", E.get({ fill: PAL.oscuro })); ins.unir(0, 0, 0, 1); ins.altos[0] = 30;
+  const t = [
+    ["1. Una fila por animal", "Llena la hoja 'Animales' a partir de la fila 2. No cambies los títulos de la fila 1."],
+    ["2. Arete (obligatorio)", "Debe ser único. Si ya existe en la app, esa fila se salta."],
+    ["3. Sexo", "Escribe Hembra o Macho (también sirve H o M)."],
+    ["4. Edad", "Pon la fecha de nacimiento, o si no la sabes, la edad aproximada en meses."],
+    ["5. Lote", "Escribe el nombre del lote. Si no existe en la app, se crea solo."],
+    ["6. Peso actual", "Queda como peso inicial del animal. Si no pones la fecha del peso, se usa la fecha de hoy."],
+    ["7. Estado reproductivo", "Solo para hembras: Preñada, Vacía o Parida. Si es Preñada y pones los meses de preñez, la app calcula el parto estimado."],
+    ["8. Fechas", "Formato dd/mm/aaaa, por ejemplo 15/03/2023."],
+    ["9. Guardar", "Guarda el archivo como .xlsx (o .csv) y súbelo en la app: Animales → Carga inicial → Importar Excel."]
+  ];
+  t.forEach(([a, b], i) => { ins.set(i + 2, 0, a, E.get({ b: 1, color: PAL.medio, fill: PAL.kpi, borde: 1, wrap: 1 })); ins.set(i + 2, 1, b, E.get({ borde: 1, wrap: 1 })); ins.altos[i + 2] = 34; });
+  const r0 = t.length + 4;
+  ins.set(r0, 0, "EJEMPLO DE UNA FILA", E.get({ b: 1, sz: 13, color: PAL.medio }));
+  COLS_IMP.forEach(([, tt, , ej], i) => { ins.set(r0 + 1 + i, 0, tt, E.get({ borde: 1, fill: PAL.kpi })); ins.set(r0 + 1 + i, 1, ej, E.get({ borde: 1, i: 1 })); });
+  const lh = libro.hoja("Lotes existentes", "7A6420");
+  lh.anchos = [24, 18, 12];
+  ["Lote", "Potrero", "Animales"].forEach((x, i) => lh.set(0, i, x, E.get({ b: 1, color: "FFFFFF", fill: PAL.medio, borde: 1 })));
+  [...lotes.values()].sort((a, b) => a.nombre.localeCompare(b.nombre)).forEach((l, i) => {
+    lh.set(i + 1, 0, l.nombre, E.get({ borde: 1 })); lh.set(i + 1, 1, nombrePotrero(l.potrero), E.get({ borde: 1 }));
+    lh.set(i + 1, 2, [...animales.values()].filter(a => a.estado === "activo" && a.lote === l.id).length, E.get({ borde: 1 }));
+  });
+  const blob = libro.blob(), url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = "Plantilla_Carga_Animales.xlsx"; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+};
+
+// ---------------- Lectura de .xlsx y .csv ----------------
+async function leerXlsx(buf) {
+  const u8 = new Uint8Array(buf), dv = new DataView(buf);
+  let e = u8.length - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error("el archivo no es un Excel válido");
+  const total = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true);
+  const archivos = {}, dec = new TextDecoder();
+  for (let i = 0; i < total; i++) {
+    const metodo = dv.getUint16(p + 10, true), comp = dv.getUint32(p + 20, true);
+    const ln = dv.getUint16(p + 28, true), le = dv.getUint16(p + 30, true), lc = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+    const nombre = dec.decode(u8.subarray(p + 46, p + 46 + ln));
+    archivos[nombre] = { metodo, comp, off };
+    p += 46 + ln + le + lc;
+  }
+  const leer = async n => {
+    const f = archivos[n]; if (!f) return null;
+    const ini = f.off + 30 + dv.getUint16(f.off + 26, true) + dv.getUint16(f.off + 28, true);
+    const datos = u8.subarray(ini, ini + f.comp);
+    if (f.metodo === 0) return dec.decode(datos);
+    const ds = new Blob([datos]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return await new Response(ds).text();
+  };
+  const xml = t => new DOMParser().parseFromString(t, "application/xml");
+  const wb = xml(await leer("xl/workbook.xml"));
+  const hojas = [...wb.getElementsByTagName("sheet")];
+  const hoja = hojas.find(h => /animales/i.test(h.getAttribute("name"))) || hojas[0];
+  const rid = hoja.getAttribute("r:id") || hoja.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+  const rels = xml(await leer("xl/_rels/workbook.xml.rels"));
+  let destino = [...rels.getElementsByTagName("Relationship")].find(r => r.getAttribute("Id") === rid).getAttribute("Target");
+  destino = destino.startsWith("/") ? destino.slice(1) : "xl/" + destino.replace(/^\.\//, "");
+  const ssTxt = await leer("xl/sharedStrings.xml");
+  const comp = ssTxt ? [...xml(ssTxt).getElementsByTagName("si")].map(si => [...si.getElementsByTagName("t")].map(t => t.textContent).join("")) : [];
+  const sh = xml(await leer(destino));
+  const filas = [];
+  for (const row of sh.getElementsByTagName("row")) {
+    const f = [];
+    for (const c of row.getElementsByTagName("c")) {
+      const r = c.getAttribute("r"), t = c.getAttribute("t");
+      const letras = r.replace(/\d+/g, ""); let ci = 0; for (const ch of letras) ci = ci * 26 + ch.charCodeAt(0) - 64; ci--;
+      let v = null;
+      if (t === "inlineStr") v = [...c.getElementsByTagName("t")].map(x => x.textContent).join("");
+      else { const ve = c.getElementsByTagName("v")[0]; if (ve) v = t === "s" ? comp[+ve.textContent] : (t === "str" || t === "e" ? ve.textContent : t === "b" ? ve.textContent === "1" : Number(ve.textContent)); }
+      f[ci] = v;
+    }
+    filas.push(f);
+  }
+  return filas;
+}
+
+function leerCsv(texto) {
+  const lin1 = texto.split(/\r?\n/)[0] || "";
+  const sep = (lin1.match(/;/g) || []).length >= (lin1.match(/,/g) || []).length ? ";" : ",";
+  const filas = []; let fila = [], campo = "", q = false;
+  for (let i = 0; i < texto.length; i++) {
+    const ch = texto[i];
+    if (q) { if (ch === '"') { if (texto[i + 1] === '"') { campo += '"'; i++; } else q = false; } else campo += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === sep) { fila.push(campo); campo = ""; }
+    else if (ch === "\n" || ch === "\r") { if (ch === "\r" && texto[i + 1] === "\n") i++; fila.push(campo); filas.push(fila); fila = []; campo = ""; }
+    else campo += ch;
+  }
+  if (campo || fila.length) { fila.push(campo); filas.push(fila); }
+  return filas;
+}
+
+const normal = t => String(t ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+function mapaColumnas(cab) {
+  const m = {}, claves = {
+    arete: /^arete/, nombre: /^nombre/, sexo: /^sexo/, raza: /^raza/, fechanac: /nacimiento/, edad: /^edad/, lote: /^lote/, origen: /^origen/,
+    costo: /costo/, madre: /^madre/, padre: /^padre/, peso: /^peso/, fechapeso: /fecha del peso|fecha peso|fecha de peso/, repro: /reproductivo|estado repro/, meses: /meses de pre|preñez|prenez/, notas: /^nota/
+  };
+  cab.forEach((c, i) => { const n = normal(c); for (const [k, re] of Object.entries(claves)) if (!(k in m) && re.test(n)) { m[k] = i; break; } });
+  return m;
+}
+function aFechaMs(v) {
+  if (v == null || v === "") return null;
+  if (typeof v === "number") return v > 20000 && v < 80000 ? Math.round((v - 25569) * DIA + new Date().getTimezoneOffset() * 60000 + 12 * 3600000) : null;
+  const m = String(v).trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (m) { let y = +m[3]; if (y < 100) y += 2000; const d = new Date(y, +m[2] - 1, +m[1], 12); return isNaN(d) ? null : d.getTime(); }
+  const iso = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return iso ? new Date(+iso[1], +iso[2] - 1, +iso[3], 12).getTime() : null;
+}
+const aNum = v => { if (v == null || v === "") return null; const n = typeof v === "number" ? v : Number(String(v).replace(/\s/g, "").replace(",", ".")); return isFinite(n) ? n : null; };
+
+let filasImp = [];
+$("archivoImp").onchange = async () => {
+  const f = $("archivoImp").files[0]; if (!f) return;
+  $("impResumen").innerHTML = '<div class="vacio">Leyendo archivo...</div>'; $("impPrevia").innerHTML = ""; $("btnImportar").classList.add("oculto");
+  try {
+    const filas = /\.csv$/i.test(f.name) ? leerCsv(await f.text()) : await leerXlsx(await f.arrayBuffer());
+    const hi = filas.findIndex(r => (r || []).some(c => /^arete/.test(normal(c))));
+    if (hi < 0) throw new Error("no encontré la columna 'Arete'. Usa la plantilla.");
+    const mp = mapaColumnas(filas[hi]);
+    const vistos = new Set(), lotesNombre = new Map([...lotes.values()].map(l => [normal(l.nombre), l]));
+    filasImp = [];
+    filas.slice(hi + 1).forEach((r, k) => {
+      const g = key => mp[key] != null ? r[mp[key]] : null;
+      const arete = String(g("arete") ?? "").trim();
+      if (!arete && !(r || []).some(c => c != null && String(c).trim() !== "")) return;   // fila vacía
+      const errores = [], avisos = [];
+      if (!arete) errores.push("sin arete");
+      else if (buscarArete(arete)) errores.push("ya existe en la app");
+      else if (vistos.has(arete.toLowerCase())) errores.push("arete repetido en el archivo");
+      vistos.add(arete.toLowerCase());
+      const sx = normal(g("sexo")); const sexo = /^h/.test(sx) ? "Hembra" : /^m/.test(sx) ? "Macho" : "";
+      if (sx && !sexo) avisos.push("sexo no reconocido");
+      const loteTxt = String(g("lote") ?? "").trim();
+      if (loteTxt && !lotesNombre.has(normal(loteTxt))) avisos.push(`lote "${loteTxt}" se creará`);
+      const peso = aNum(g("peso")); if (g("peso") != null && g("peso") !== "" && !(peso > 0)) avisos.push("peso inválido");
+      const nac = aFechaMs(g("fechanac")); if (g("fechanac") && !nac) avisos.push("fecha de nacimiento inválida");
+      const edad = aNum(g("edad"));
+      const rp = normal(g("repro")); const repro = /^pre/.test(rp) ? "Preñada" : /^vac/.test(rp) ? "Vacía" : /^par/.test(rp) ? "Parida" : "";
+      if (repro && sexo !== "Hembra") avisos.push("estado reproductivo solo aplica a hembras");
+      const og = normal(g("origen"));
+      filasImp.push({
+        fila: hi + k + 2, errores, avisos, arete, nombre: String(g("nombre") ?? "").trim(), sexo, raza: String(g("raza") ?? "").trim(),
+        fechaNacMs: nac || (edad > 0 ? Date.now() - edad * MES : null), loteTxt, origen: /^nac/.test(og) ? "Nacido" : /^com/.test(og) ? "Comprado" : "",
+        costoCompra: aNum(g("costo")), madre: String(g("madre") ?? "").trim(), padre: String(g("padre") ?? "").trim(),
+        peso: peso > 0 ? peso : null, fechaPeso: aFechaMs(g("fechapeso")), repro: sexo === "Hembra" ? repro : "", mesesPrenez: aNum(g("meses")) || 0,
+        notas: String(g("notas") ?? "").trim()
+      });
+    });
+    const ok = filasImp.filter(r => !r.errores.length), mal = filasImp.length - ok.length;
+    const nuevosLotes = [...new Set(ok.filter(r => r.loteTxt && !lotesNombre.has(normal(r.loteTxt))).map(r => r.loteTxt))];
+    $("impResumen").innerHTML = `<div class="card"><div class="stats">
+      <div><b>${filasImp.length}</b><span>Filas</span></div><div><b style="color:#39ff7a">${ok.length}</b><span>Se importan</span></div>
+      <div><b style="color:${mal ? "#ff8a80" : "inherit"}">${mal}</b><span>Con error</span></div><div><b>${ok.filter(r => r.peso).length}</b><span>Con peso</span></div></div>
+      ${nuevosLotes.length ? `<div class="sub" style="margin-top:8px">Lotes nuevos que se crearán: <b>${nuevosLotes.map(esc).join(", ")}</b></div>` : ""}</div>`;
+    $("impPrevia").innerHTML = filasImp.length ? `<table><tr><th>Fila</th><th>Arete</th><th>Sexo</th><th>Lote</th><th>Peso</th><th>Estado</th></tr>` +
+      filasImp.map(r => `<tr style="background:${r.errores.length ? "#4a1f1f" : r.avisos.length ? "#4a4220" : "transparent"}"><td>${r.fila}</td><td><b>${esc(r.arete || "—")}</b></td><td>${esc(r.sexo || "—")}</td><td>${esc(r.loteTxt || "—")}</td><td>${kg(r.peso)}</td>
+        <td>${r.errores.length ? "❌ " + esc(r.errores.join(", ")) : r.avisos.length ? "⚠ " + esc(r.avisos.join(", ")) : "✔"}</td></tr>`).join("") + "</table>" : '<div class="vacio">El archivo no tiene filas con datos.</div>';
+    if (ok.length) { $("btnImportar").textContent = `Importar ${ok.length} animales`; $("btnImportar").classList.remove("oculto"); }
+  } catch (e) { console.error(e); $("impResumen").innerHTML = `<div class="aviso">No se pudo leer el archivo: ${esc(e.message)}</div>`; }
+};
+
+$("btnImportar").onclick = () => {
+  const ok = filasImp.filter(r => !r.errores.length);
+  if (!ok.length || !confirm(`¿Importar ${ok.length} animales?`)) return;
+  const porNombre = new Map([...lotes.values()].map(l => [normal(l.nombre), l.id]));
+  ok.forEach(r => {
+    let lote = "";
+    if (r.loteTxt) {
+      const k = normal(r.loteTxt);
+      if (!porNombre.has(k)) {
+        const ref = doc(collection(db, "lotes"));
+        setDoc(ref, { nombre: r.loteTxt, potrero: "", pesoObjetivo: null }).catch(errorGuardar);
+        lotes.set(ref.id, { id: ref.id, nombre: r.loteTxt, potrero: "", pesoObjetivo: null });
+        porNombre.set(k, ref.id);
+      }
+      lote = porNombre.get(k);
+    }
+    if (!buscarArete(r.arete)) registrarExistente({ ...r, lote });
+  });
+  alert(`✔ ${ok.length} animales importados.`);
+  filasImp = []; $("archivoImp").value = ""; $("impPrevia").innerHTML = ""; $("impResumen").innerHTML = ""; $("btnImportar").classList.add("oculto");
+  ir("animales");
+};
 </script>
 </body>
 </html>
