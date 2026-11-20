@@ -86,7 +86,7 @@
 
 <!-- ================= APP ================= -->
 <div id="app" class="oculto">
-<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.6</small><br><span id="sync">☁️ Sincronizado</span></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
+<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.7</small><br><span id="sync">☁️ Sincronizado</span></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
 <div id="bannerDemo" class="oculto" style="background:#7a6420;color:#fff;font-size:13px;padding:7px 14px;text-align:center">MODO DEMO · los datos se guardan solo en este teléfono</div>
 <main>
 
@@ -165,10 +165,21 @@
 
   <!-- ---------- LOTES ---------- -->
   <section class="vista" id="v-lotes">
-    <div class="fila"><h2>Lotes</h2><button class="btn verde peq" id="btnNuevoLote">+ Lote</button></div>
+    <h2>Lotes, potreros y movimientos</h2>
+    <div class="dos">
+      <button class="btn peq" id="btnRotar">🔄 Rotar lote de potrero</button>
+      <button class="btn peq" id="btnMoverAn">↔️ Mover animales</button>
+      <button class="btn rojo peq" id="btnHospital">🏥 Ingresar a hospital</button>
+      <button class="btn peq" id="btnMaternidad" style="background:#8E44AD">🍼 Ingresar a maternidad</button>
+    </div>
+    <div id="panelHospital"></div>
+    <div id="panelMaternidad"></div>
+    <div class="fila"><h3>Lotes</h3><button class="btn verde peq" id="btnNuevoLote">+ Lote</button></div>
     <div id="listaLotes"></div>
-    <div class="fila"><h3>Potreros</h3><button class="btn verde peq" id="btnNuevoPotrero">+ Potrero</button></div>
+    <div class="fila"><h3>Potreros y corrales</h3><button class="btn verde peq" id="btnNuevoPotrero">+ Potrero</button></div>
     <div id="listaPotreros"></div>
+    <h3>Últimos movimientos</h3>
+    <div id="listaMovs"></div>
   </section>
 
   <!-- ---------- REPRODUCCIÓN ---------- -->
@@ -561,6 +572,7 @@ const potreros = new Map();
 let repro = [];
 let sanidad = [];
 let ventas = [];
+let movimientos = [];
 let desuscribir = [];
 
 const nombreLote = id => lotes.get(id)?.nombre || "Sin lote";
@@ -612,6 +624,9 @@ function escuchar() {
   }, err));
   desuscribir.push(onSnapshot(collection(db, "sanidad"), s => {
     sanidad = []; s.forEach(d => sanidad.push({ id: d.id, ...d.data() })); refrescar();
+  }, err));
+  desuscribir.push(onSnapshot(collection(db, "movimientos"), s => {
+    movimientos = []; s.forEach(d => movimientos.push({ id: d.id, ...d.data() })); refrescar();
   }, err));
   desuscribir.push(onSnapshot(collection(db, "ventas"), s => {
     ventas = []; s.forEach(d => ventas.push({ id: d.id, ...d.data() })); refrescar();
@@ -922,6 +937,8 @@ function renderAnimales() {
       <div class="fila"><b>${esc(a.arete)} ${a.nombre ? "· " + esc(a.nombre) : ""}</b><b>${kg(a.pesoActual)}</b></div>
       <div class="fila sub" style="margin-top:4px"><span>${esc(a.sexo || "")} · ${esc(nombreLote(a.lote))}</span><span>GDP ${gdpTxt(a.gdpTotal)}</span></div>
       ${obj && a.pesoActual >= obj && a.estado === "activo" ? '<div style="margin-top:6px"><span class="chip ok">Listo para venta</span></div>' : ""}
+      ${a.estado === "activo" && lotes.get(a.lote)?.tipo === "hospital" ? '<div style="margin-top:6px"><span class="chip mal">🏥 Hospital</span></div>' : ""}
+      ${a.estado === "activo" && lotes.get(a.lote)?.tipo === "maternidad" ? '<div style="margin-top:6px"><span class="chip" style="background:#8E44AD">🍼 Maternidad</span></div>' : ""}
     </div>`;
   }).join("") : '<div class="vacio">No hay animales con ese filtro.</div>';
 }
@@ -1025,6 +1042,8 @@ async function renderDetalle(id, recargar) {
       <div class="fila"><h2 style="margin:0">${esc(a.arete)} ${a.nombre ? "· " + esc(a.nombre) : ""}</h2><button class="btn peq" id="btnEditar">Editar</button></div>
       <div class="sub" style="margin-top:6px">${esc(a.sexo || "—")} · ${esc(a.raza || "Raza —")} · ${edad != null ? edad + " meses" : "Edad —"} · <span class="chip ${a.estado === "activo" ? "ok" : "mal"}">${esc(a.estado)}</span></div>
       <div class="sub">Lote: ${esc(nombreLote(a.lote))} · Potrero: ${esc(nombrePotrero(lotes.get(a.lote)?.potrero))}</div>
+      ${lotes.get(a.lote)?.tipo === "hospital" ? `<div style="margin-top:6px"><span class="chip mal">🏥 En hospital${a.hospital?.desdeMs ? " desde " + fecha(a.hospital.desdeMs) : ""}${a.hospital?.motivo ? " · " + esc(a.hospital.motivo) : ""}</span></div>` : ""}
+      ${lotes.get(a.lote)?.tipo === "maternidad" ? '<div style="margin-top:6px"><span class="chip" style="background:#8E44AD">🍼 En maternidad</span></div>' : ""}
       <div class="sub">Madre: ${esc(a.madre || "—")} · Padre: ${esc(a.padre || "—")}</div>
       ${a.origen ? `<div class="sub">Origen: ${esc(a.origen)}${a.costoCompra ? " · Costo: $" + num(a.costoCompra, 2) : ""}</div>` : ""}
       ${a.notas ? `<div class="sub">Notas: ${esc(a.notas)}</div>` : ""}
@@ -1050,9 +1069,13 @@ async function renderDetalle(id, recargar) {
     ` : ""}
     <div class="fila"><h3>Sanidad</h3><button class="btn verde peq" id="btnSanAnimal">+ Registro</button></div>
     ${tablaSanidad(sanidad.filter(r => (r.animales || []).includes(a.id)).sort((x, y) => y.fechaMs - x.fechaMs), false)}
+    ${a.estado === "activo" ? `<div class="dos"><button class="btn" id="btnMoverEste">↔️ Mover de lote</button>${lotes.get(a.lote)?.tipo === "hospital" ? '<button class="btn verde" id="btnAltaEste">✔ Dar de alta</button>' : '<button class="btn rojo" id="btnHospEste">🏥 Al hospital</button>'}</div>` : ""}
     <button class="btn" id="btnBitacora">📄 Bitácora en Excel</button>
     ${a.estado === "activo" ? '<button class="btn rojo" id="btnMuerte">Registrar muerte</button>' : ""}`;
   $("btnEditar").onclick = () => formAnimal(id);
+  if ($("btnMoverEste")) $("btnMoverEste").onclick = () => formMoverAnimales([id]);
+  if ($("btnAltaEste")) $("btnAltaEste").onclick = () => formAlta(id);
+  if ($("btnHospEste")) $("btnHospEste").onclick = () => formHospital([id]);
   $("btnBitacora").onclick = async () => {
     $("btnBitacora").disabled = true;
     try {
@@ -1088,7 +1111,8 @@ function grafica(ps) {
 //  LOTES Y POTREROS
 // ======================================================================
 function renderLotes() {
-  const ls = [...lotes.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const ls = [...lotes.values()].sort((a, b) => (a.tipo ? 1 : 0) - (b.tipo ? 1 : 0) || a.nombre.localeCompare(b.nombre));
+  renderHospital(); renderMaternidad(); renderMovs();
   $("listaLotes").innerHTML = ls.length ? ls.map(l => {
     const an = [...animales.values()].filter(a => a.estado === "activo" && a.lote === l.id);
     const conPeso = an.filter(a => a.pesoActual != null);
@@ -1097,8 +1121,8 @@ function renderLotes() {
     const gdp = conGdp.length ? conGdp.reduce((s, a) => s + a.gdpTotal, 0) / conGdp.length : null;
     const listos = l.pesoObjetivo ? an.filter(a => a.pesoActual >= l.pesoObjetivo).length : null;
     const bajos = gdp != null ? conGdp.filter(a => a.gdpTotal < gdp * 0.7).length : 0;
-    return `<div class="card">
-      <div class="fila"><b>${esc(l.nombre)}</b><button class="btn gris peq" data-editlote="${l.id}">Editar</button></div>
+    return `<div class="card" ${l.tipo === "hospital" ? 'style="border-color:#b03a2e"' : l.tipo === "maternidad" ? 'style="border-color:#8E44AD"' : ""}>
+      <div class="fila"><b>${l.tipo === "hospital" ? "🏥 " : l.tipo === "maternidad" ? "🍼 " : ""}${esc(l.nombre)}</b><button class="btn gris peq" data-editlote="${l.id}">Editar</button></div>
       <div class="sub">Potrero: ${esc(nombrePotrero(l.potrero))}${l.pesoObjetivo ? " · Peso objetivo: " + kg(l.pesoObjetivo) : ""}</div>
       <div class="stats">
         <div><b>${an.length}</b><span>Animales</span></div>
@@ -1111,11 +1135,17 @@ function renderLotes() {
     </div>`;
   }).join("") : '<div class="vacio">Todavía no hay lotes.</div>';
 
-  const ps = [...potreros.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const ps = [...potreros.values()].sort((a, b) => (a.tipo === "corral" ? 1 : 0) - (b.tipo === "corral" ? 1 : 0) || a.nombre.localeCompare(b.nombre));
   $("listaPotreros").innerHTML = ps.length ? ps.map(p => {
-    const ls2 = [...lotes.values()].filter(l => l.potrero === p.id);
-    return `<div class="card"><div class="fila"><b>${esc(p.nombre)}</b><button class="btn gris peq" data-editpot="${p.id}">Editar</button></div>
-      <div class="sub">${p.hectareas ? num(p.hectareas, 1) + " ha · " : ""}Lotes: ${ls2.length ? ls2.map(l => esc(l.nombre)).join(", ") : "ninguno"}</div></div>`;
+    const e = estadoPotrero(p.id);
+    const chip = e.ocupado
+      ? `<span class="chip ok">Ocupado${e.dias != null ? " · " + e.dias + " días" : ""}</span>`
+      : `<span class="chip ${e.listo ? "amar" : ""}">${e.dias != null ? "En descanso · " + e.dias + " días" : "Libre"}${e.listo ? " · listo" : ""}</span>`;
+    return `<div class="card"><div class="fila"><b>${p.tipo === "corral" ? "🚧 " : "🌾 "}${esc(p.nombre)}</b><button class="btn gris peq" data-editpot="${p.id}">Editar</button></div>
+      <div style="margin-top:4px">${chip}</div>
+      <div class="sub" style="margin-top:4px">${p.hectareas ? num(p.hectareas, 1) + " ha · " : ""}Lotes: ${e.lotes.length ? e.lotes.map(l => esc(l.nombre)).join(", ") : "ninguno"}${e.animales ? " · " + e.animales + " animales" : ""}</div>
+      ${e.ua != null ? `<div class="sub">Carga: <b style="color:#fff">${num(e.ua, 2)} UA/ha</b> (${num(e.kg)} kg en pie)</div>` : ""}
+      ${p.descanso ? `<div class="sub">Descanso recomendado: ${p.descanso} días</div>` : ""}</div>`;
   }).join("") : '<div class="vacio">Todavía no hay potreros.</div>';
 }
 
@@ -1123,6 +1153,9 @@ $("v-lotes").onclick = e => {
   const t = e.target;
   if (t.dataset.editlote) formLote(t.dataset.editlote);
   if (t.dataset.editpot) formPotrero(t.dataset.editpot);
+  if (t.dataset.alta) formAlta(t.dataset.alta);
+  if (t.dataset.salmat) formSalidaMaternidad(t.dataset.salmat);
+  if (t.dataset.ver) abrirDetalle(t.dataset.ver);
   if (t.dataset.verlote) { ir("animales"); $("filtroLote").value = t.dataset.verlote; $("filtroEstado").value = "activo"; renderAnimales(); }
 };
 $("btnNuevoLote").onclick = () => formLote(null);
@@ -1134,6 +1167,8 @@ function formLote(id) {
     <label>Nombre *</label><input id="lNombre" value="${esc(l.nombre)}">
     <label>Potrero</label><select id="lPotrero">${opcionesPotrero(l.potrero)}</select>
     <label>Peso objetivo de venta (kg)</label><input id="lObjetivo" type="number" inputmode="decimal" value="${l.pesoObjetivo ?? ""}">
+    <label>Tipo de lote</label>
+    <select id="lTipo"><option value="">Normal</option><option value="hospital" ${l.tipo === "hospital" ? "selected" : ""}>🏥 Hospital (enfermos / observación)</option><option value="maternidad" ${l.tipo === "maternidad" ? "selected" : ""}>🍼 Maternidad (madres con crías)</option></select>
     <button class="btn verde" id="lGuardar">Guardar</button>
     ${id ? '<button class="btn rojo" id="lBorrar">Eliminar lote</button>' : ""}
     <button class="btn gris" id="lCancelar">Cancelar</button>`);
@@ -1141,7 +1176,8 @@ function formLote(id) {
   $("lGuardar").onclick = () => {
     const nombre = $("lNombre").value.trim();
     if (!nombre) return alert("El nombre es obligatorio.");
-    const datos = { nombre, potrero: $("lPotrero").value, pesoObjetivo: $("lObjetivo").value ? Number($("lObjetivo").value) : null };
+    const datos = { nombre, potrero: $("lPotrero").value, pesoObjetivo: $("lObjetivo").value ? Number($("lObjetivo").value) : null, tipo: $("lTipo").value };
+    if (id && l.potrero !== datos.potrero) registrarRotacion(id, l.potrero || "", datos.potrero, Date.now(), "Cambio desde editar lote");
     if (id) updateDoc(doc(db, "lotes", id), datos).catch(errorGuardar);
     else setDoc(doc(collection(db, "lotes")), datos).catch(errorGuardar);
     cerrarModal();
@@ -1157,7 +1193,11 @@ function formPotrero(id) {
   const p = id ? potreros.get(id) : {};
   abrirModal(`<h2>${id ? "Editar potrero" : "Nuevo potrero"}</h2>
     <label>Nombre *</label><input id="pNombre" value="${esc(p.nombre)}">
-    <label>Hectáreas</label><input id="pHa" type="number" inputmode="decimal" value="${p.hectareas ?? ""}">
+    <div class="dos">
+      <div><label>Tipo</label><select id="pTipo"><option value="potrero">🌾 Potrero</option><option value="corral" ${p.tipo === "corral" ? "selected" : ""}>🚧 Corral</option></select></div>
+      <div><label>Hectáreas</label><input id="pHa" type="number" inputmode="decimal" value="${p.hectareas ?? ""}"></div>
+    </div>
+    <label>Días de descanso recomendados</label><input id="pDesc" type="number" inputmode="numeric" placeholder="Ej: 30" value="${p.descanso ?? ""}">
     <button class="btn verde" id="pGuardar">Guardar</button>
     ${id ? '<button class="btn rojo" id="pBorrar">Eliminar potrero</button>' : ""}
     <button class="btn gris" id="pCancelar">Cancelar</button>`);
@@ -1165,7 +1205,7 @@ function formPotrero(id) {
   $("pGuardar").onclick = () => {
     const nombre = $("pNombre").value.trim();
     if (!nombre) return alert("El nombre es obligatorio.");
-    const datos = { nombre, hectareas: $("pHa").value ? Number($("pHa").value) : null };
+    const datos = { nombre, hectareas: $("pHa").value ? Number($("pHa").value) : null, tipo: $("pTipo").value, descanso: $("pDesc").value ? Number($("pDesc").value) : null };
     if (id) updateDoc(doc(db, "potreros", id), datos).catch(errorGuardar);
     else setDoc(doc(collection(db, "potreros")), datos).catch(errorGuardar);
     cerrarModal();
@@ -1246,8 +1286,10 @@ function formEvento(arete) {
       t === "palpacion" ? `<label>Resultado</label><select id="eRes"><option>Preñada</option><option>Vacía</option></select>` :
       t === "parto" ? `<div class="dos"><div><label>Arete de la cría</label><input id="eCria"></div>
         <div><label>Sexo de la cría</label><select id="eCriaSexo"><option value="">—</option><option>Hembra</option><option>Macho</option></select></div></div>
-        <div class="sub" style="margin-top:6px">Si pones el arete, la cría se registra sola como animal nuevo.</div>` :
-      t === "destete" ? `<label>Arete de la cría destetada</label><input id="eCria" list="dlAretes">` : "";
+        <div class="sub" style="margin-top:6px">Si pones el arete, la cría se registra sola como animal nuevo.</div>
+        <label class="chk" style="color:#e8f0ea;font-size:15px;margin-top:10px"><input type="checkbox" id="eMat" checked> 🍼 Pasar madre y cría al corral de maternidad</label>` :
+      t === "destete" ? `<label>Arete de la cría destetada</label><input id="eCria" list="dlAretes">
+        <label>Mover la cría al lote</label><select id="eCriaLote"><option value="">No moverla</option>${opcionesLote("", false)}</select>` : "";
   };
   $("eTipo").onchange = campos; campos();
   $("eCancelar").onclick = cerrarModal;
@@ -1262,9 +1304,14 @@ function formEvento(arete) {
     if ($("eRes")) ev.resultado = $("eRes").value;
     if ($("eCria")) ev.cria = $("eCria").value.trim();
     if ($("eCriaSexo")) ev.criaSexo = $("eCriaSexo").value;
-    if (t === "parto" && ev.cria) {
-      if (buscarArete(ev.cria)) return alert("Ya existe un animal con el arete de la cría.");
-      crearAnimal({ arete: ev.cria, sexo: ev.criaSexo || "", fechaNacMs: f, madre: h.arete, lote: h.lote || "", raza: h.raza || "" });
+    if (t === "parto" && ev.cria && buscarArete(ev.cria)) return alert("Ya existe un animal con el arete de la cría.");
+    const aMat = t === "parto" && $("eMat") && $("eMat").checked;
+    const matId = aMat ? loteEspecial("maternidad") : null;
+    if (t === "parto" && ev.cria) crearAnimal({ arete: ev.cria, sexo: ev.criaSexo || "", fechaNacMs: f, madre: h.arete, lote: matId || h.lote || "", raza: h.raza || "", origen: "Nacido" });
+    if (aMat) moverAnimales([h.id], matId, { motivo: "Parto", detalle: ev.cria ? "Con cría " + ev.cria : "", fechaMs: f });
+    if (t === "destete" && ev.cria && $("eCriaLote") && $("eCriaLote").value) {
+      const c = buscarArete(ev.cria);
+      if (c) moverAnimales([c.id], $("eCriaLote").value, { motivo: "Destete", detalle: "Madre " + h.arete, fechaMs: f });
     }
     setDoc(doc(collection(db, "reproduccion")), ev).catch(errorGuardar);
     cerrarModal();
@@ -1293,7 +1340,7 @@ function proximaCumplida(r) {
     (o.animales || []).some(x => (r.animales || []).includes(x)));
 }
 
-function destinoSan(r) { return r.aplicaA === "lote" ? "Lote " + nombreLote(r.loteId) + ` (${(r.animales || []).length})` : (r.aretes || [])[0] || "—"; }
+function destinoSan(r) { return r.aplicaA === "lote" ? "Lote " + nombreLote(r.loteId) + ` (${(r.animales || []).length})` : (r.aretes || []).join(", ") || "—"; }
 
 function tablaSanidad(lista, conDestino) {
   if (!lista.length) return '<div class="vacio">Sin registros.</div>';
@@ -1708,7 +1755,8 @@ const HOJAS_REP = [
   ["resumen", "📈 Resumen general (indicadores y gráficas de barras)"], ["animales", "🐄 Animales (ficha completa)"],
   ["pesadas", "⚖️ Pesadas (con diferencia y GDP)"], ["lotes", "📋 Lotes"], ["repro", "🧬 Eventos reproductivos"],
   ["estrepro", "🤰 Estado reproductivo de hembras"], ["sanidad", "💉 Sanidad"], ["ventas", "💵 Ventas"],
-  ["muertes", "✝️ Muertes"], ["sesiones", "🗂️ Sesiones de pesaje por lote"]
+  ["muertes", "✝️ Muertes"], ["sesiones", "🗂️ Sesiones de pesaje por lote"],
+  ["movimientos", "↔️ Movimientos (rotaciones, cambios, hospital, maternidad)"], ["potreros", "🌾 Potreros y corrales (ocupación y carga)"]
 ];
 let ultimoExcel = null;
 
@@ -1997,6 +2045,35 @@ async function armarExcel() {
       { t: "Edad (meses)", w: 9, tipo: "num" }, { t: "Último peso", w: 11, tipo: "kg" }, { t: "Causa", w: 30, b: 1, wrap: 1 }];
     tablaExcel(libro, "Muertes", "555555", "MUERTES DEL PERÍODO", sub, cols, filas, {
       totales: [`${filas.length} muertes`, "", "", "", "", "", filas.reduce((t, f) => t + (f[6] || 0), 0), ""]
+    });
+  }
+
+  // ===== MOVIMIENTOS =====
+  if (incl("movimientos")) {
+    const filas = movimientos.filter(m => enRango(m.fechaMs) && (!loteF || [m.loteId, m.deLote, m.aLote].includes(loteF)))
+      .sort((a, b) => b.fechaMs - a.fechaMs).map(m => [aFecha(m.fechaMs), TIPOS_MOV[m.tipo] || m.tipo,
+        m.tipo === "rotacion" ? "Lote " + nombreLote(m.loteId) : (m.aretes || []).join(", "),
+        m.tipo === "rotacion" ? nombrePotrero(m.dePotrero) : nombreLote(m.deLote), m.tipo === "rotacion" ? nombrePotrero(m.aPotrero) : nombreLote(m.aLote),
+        m.tipo === "rotacion" ? (m.cantidad ?? null) : (m.animales || []).length, m.motivo || "", m.detalle || "", m.usuario || ""]);
+    const cols = [{ t: "Fecha", w: 15, tipo: "fechahora" }, { t: "Tipo", w: 20, b: 1 }, { t: "Lote / animales", w: 28, wrap: 1 }, { t: "Desde", w: 16 }, { t: "Hacia", w: 16, b: 1 },
+      { t: "N° animales", w: 10, tipo: "num" }, { t: "Motivo", w: 18 }, { t: "Detalle", w: 26, wrap: 1 }, { t: "Usuario", w: 22 }];
+    const col = { "Ingreso a hospital": PAL.rojo, "Alta de hospital": PAL.verde, "Ingreso a maternidad": "F1E6F7", "Salida de maternidad": "F1E6F7", "Rotación de potrero": "FFF6D6" };
+    tablaExcel(libro, "Movimientos", "2980B9", "MOVIMIENTOS DEL REBAÑO", sub, cols, filas, {
+      resaltar: f => col[f[1]] || null, totales: [`${filas.length} movimientos`, "", "", "", "", filas.reduce((t, f) => t + (f[5] || 0), 0), "", "", ""]
+    });
+  }
+  if (incl("potreros")) {
+    const filas = [...potreros.values()].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(p => {
+      const e = estadoPotrero(p.id);
+      return [p.nombre, p.tipo === "corral" ? "Corral" : "Potrero", p.hectareas ?? null, e.ocupado ? "Ocupado" : "En descanso", e.lotes.map(l => l.nombre).join(", "),
+        e.animales, e.kg || null, e.ua, e.ocupado ? e.dias : null, !e.ocupado ? e.dias : null, p.descanso ?? null, !e.ocupado && e.listo ? "SÍ" : ""];
+    });
+    const cols = [{ t: "Potrero", w: 18, b: 1 }, { t: "Tipo", w: 10 }, { t: "Hectáreas", w: 10, tipo: "dec" }, { t: "Estado", w: 12, b: 1, h: "center" }, { t: "Lotes", w: 22, wrap: 1 },
+      { t: "Animales", w: 10, tipo: "num" }, { t: "Kg en pie", w: 12, tipo: "kg" }, { t: "Carga (UA/ha)", w: 11, tipo: "dec" }, { t: "Días ocupado", w: 10, tipo: "num" },
+      { t: "Días en descanso", w: 10, tipo: "num" }, { t: "Descanso recomendado", w: 11, tipo: "num" }, { t: "Listo para pastoreo", w: 10, h: "center" }];
+    tablaExcel(libro, "Potreros", "7A6420", "POTREROS Y CORRALES (HOY)", sub, cols, filas, {
+      resaltar: f => f[11] === "SÍ" ? PAL.verde : f[3] === "Ocupado" ? "FFF6D6" : null, barras: [[7, "F4B183"]],
+      totales: [`${filas.length} potreros`, "", filas.reduce((t, f) => t + (f[2] || 0), 0), `${filas.filter(f => f[3] === "Ocupado").length} ocupados`, "", filas.reduce((t, f) => t + f[5], 0), filas.reduce((t, f) => t + (f[6] || 0), 0), "", "", "", "", ""]
     });
   }
 
@@ -2701,12 +2778,13 @@ async function hojaBitacora(libro, a, venta, usados) {
   repA.forEach(e => ev.push([e.fechaMs, "Reproducción", TIPOS[e.tipo] || e.tipo, detalleEvento(e) + (e.notas && e.tipo !== "aborto" ? (detalleEvento(e) ? " · " : "") + e.notas : ""), null, null, null]));
   if (a.estado === "vendido") ev.push([a.fechaBajaMs, "Venta", "Salida por venta", venta ? `Ticket ${venta.ticket} · ${venta.comprador} · ${kg(linea?.peso)} netos a ${dinero(venta.precioKg)}/kg = ${dinero(ingreso)}` : "", null, null, null]);
   if (a.estado === "muerto") ev.push([a.fechaBajaMs, "Baja", "Muerte", a.causaBaja || "", null, null, null]);
+  movimientosDe(a).forEach(m => ev.push([m.fechaMs, "Movimiento", m.titulo, m.detalle, null, null, null]));
   ev.sort((x, y) => x[0] - y[0]);
 
   const cab = ["Fecha", "Tipo", "Evento", "Detalle", "Peso", "Diferencia", "GDP"], tipos = ["fecha", "txt", "txt", "txt", "kg", "dif", "gdp"];
   cab.forEach((t, i) => h.set(r, i, t, E.get({ b: 1, color: "FFFFFF", fill: "5B2C6F", h: "center", borde: 1 })));
   h.altos[r] = 24; const ini = r + 1;
-  const colores = { Pesaje: "FFFFFF", Sanidad: "FDE9E7", "Reproducción": "F1E6F7", Venta: PAL.verde, Baja: "E7E6E6", Nacimiento: "FFF6D6", Registro: "E3F1E7" };
+  const colores = { Movimiento: "EAF2FB", Pesaje: "FFFFFF", Sanidad: "FDE9E7", "Reproducción": "F1E6F7", Venta: PAL.verde, Baja: "E7E6E6", Nacimiento: "FFF6D6", Registro: "E3F1E7" };
   ev.forEach(e => {
     r++;
     const fillC = e[2] === "Pesaje para venta" ? "DDEBF7" : colores[e[1]] || "FFFFFF";
@@ -2714,6 +2792,312 @@ async function hojaBitacora(libro, a, venta, usados) {
   });
   if (r >= ini) h.barra(ini, r, 4, "63BE7B");
   h.freeze = 0;
+}
+
+// ======================================================================
+//  MOVIMIENTOS: rotación de potreros, cambios de lote, hospital y maternidad
+// ======================================================================
+const UA = 450;   // kg de una unidad animal
+const TIPOS_MOV = {
+  rotacion: "Rotación de potrero", cambio_lote: "Cambio de lote", hospital_ingreso: "Ingreso a hospital",
+  hospital_alta: "Alta de hospital", maternidad_ingreso: "Ingreso a maternidad", maternidad_salida: "Salida de maternidad"
+};
+const ICONO_MOV = { rotacion: "🔄", cambio_lote: "↔️", hospital_ingreso: "🏥", hospital_alta: "✔", maternidad_ingreso: "🍼", maternidad_salida: "🍼" };
+
+// Devuelve el lote especial (hospital o maternidad); si no existe lo crea
+function loteEspecial(tipo) {
+  const l = [...lotes.values()].find(x => x.tipo === tipo);
+  if (l) return l.id;
+  const ref = doc(collection(db, "lotes"));
+  const datos = { nombre: tipo === "hospital" ? "Hospital" : "Maternidad", potrero: "", pesoObjetivo: null, tipo };
+  setDoc(ref, datos).catch(errorGuardar);
+  lotes.set(ref.id, { id: ref.id, ...datos });
+  return ref.id;
+}
+
+function moverAnimales(ids, destino, op = {}) {
+  const f = op.fechaMs || Date.now(), lD = lotes.get(destino), grupos = {};
+  ids.forEach(id => { const a = animales.get(id); if (a && a.estado === "activo" && a.lote !== destino) (grupos[a.lote || ""] ||= []).push(a); });
+  let n = 0;
+  Object.entries(grupos).forEach(([origen, an]) => {
+    const lO = lotes.get(origen);
+    const tipo = op.tipo || (lD?.tipo === "hospital" ? "hospital_ingreso" : lD?.tipo === "maternidad" ? "maternidad_ingreso" :
+      lO?.tipo === "hospital" ? "hospital_alta" : lO?.tipo === "maternidad" ? "maternidad_salida" : "cambio_lote");
+    setDoc(doc(collection(db, "movimientos")), {
+      tipo, fechaMs: f, deLote: origen, aLote: destino, dePotrero: lO?.potrero || "", aPotrero: lD?.potrero || "",
+      animales: an.map(a => a.id), aretes: an.map(a => a.arete), motivo: op.motivo || "", detalle: op.detalle || "", usuario, creadoMs: Date.now()
+    }).catch(errorGuardar);
+    an.forEach(a => {
+      const cambios = { lote: destino, loteAnterior: origen, fechaCambioLote: f };
+      if (lD?.tipo === "hospital") cambios.hospital = { motivo: op.motivo || "", diagnostico: op.detalle || "", desdeMs: f };
+      else if (a.hospital) cambios.hospital = null;
+      updateDoc(doc(db, "animales", a.id), cambios).catch(errorGuardar);
+      Object.assign(a, cambios); n++;
+    });
+  });
+  return n;
+}
+
+function registrarRotacion(loteId, de, a, f, motivo) {
+  const n = [...animales.values()].filter(x => x.estado === "activo" && x.lote === loteId).length;
+  setDoc(doc(collection(db, "movimientos")), { tipo: "rotacion", fechaMs: f, loteId, dePotrero: de, aPotrero: a, cantidad: n, animales: [], aretes: [], motivo: motivo || "", detalle: "", usuario, creadoMs: Date.now() }).catch(errorGuardar);
+}
+
+function estadoPotrero(pid) {
+  const ls = [...lotes.values()].filter(l => l.potrero === pid);
+  const an = [...animales.values()].filter(a => a.estado === "activo" && ls.some(l => l.id === a.lote));
+  const kgPie = an.reduce((t, a) => t + (a.pesoActual || 0), 0), p = potreros.get(pid);
+  const rot = movimientos.filter(m => m.tipo === "rotacion").sort((a, b) => b.fechaMs - a.fechaMs);
+  let desde = null;
+  if (ls.length) desde = rot.find(m => m.aPotrero === pid)?.fechaMs ?? null;
+  else desde = rot.find(m => m.dePotrero === pid)?.fechaMs ?? null;
+  const dias = desde ? Math.floor((Date.now() - desde) / DIA) : null;
+  return {
+    ocupado: ls.length > 0, lotes: ls, animales: an.length, kg: kgPie, dias,
+    ua: p?.hectareas && kgPie ? kgPie / UA / p.hectareas : null,
+    listo: !ls.length && p?.descanso ? (dias != null && dias >= p.descanso) : false
+  };
+}
+
+// Movimientos de un animal, incluidas las rotaciones de los lotes donde estaba en ese momento
+function movimientosDe(a) {
+  const propios = movimientos.filter(m => (m.animales || []).includes(a.id)).sort((x, y) => x.fechaMs - y.fechaMs);
+  const tramos = []; let loteAct = propios.length ? propios[0].deLote : a.lote, desde = 0;
+  propios.forEach(m => { tramos.push({ lote: loteAct, desde, hasta: m.fechaMs }); loteAct = m.aLote; desde = m.fechaMs; });
+  tramos.push({ lote: loteAct, desde, hasta: a.estado === "activo" ? Infinity : (a.fechaBajaMs || Infinity) });
+  const out = propios.map(m => ({
+    fechaMs: m.fechaMs, titulo: TIPOS_MOV[m.tipo] || m.tipo,
+    detalle: `${nombreLote(m.deLote)} → ${nombreLote(m.aLote)}${m.motivo ? " · " + m.motivo : ""}${m.detalle ? " · " + m.detalle : ""}`
+  }));
+  movimientos.filter(m => m.tipo === "rotacion").forEach(m => {
+    if (tramos.some(t => t.lote === m.loteId && m.fechaMs >= t.desde && m.fechaMs < t.hasta))
+      out.push({ fechaMs: m.fechaMs, titulo: "Rotación de potrero", detalle: `Lote ${nombreLote(m.loteId)}: ${nombrePotrero(m.dePotrero)} → ${nombrePotrero(m.aPotrero)}` });
+  });
+  return out;
+}
+
+// ---------------- Paneles de hospital y maternidad ----------------
+function renderHospital() {
+  const hl = [...lotes.values()].filter(l => l.tipo === "hospital").map(l => l.id);
+  const an = [...animales.values()].filter(a => a.estado === "activo" && hl.includes(a.lote)).sort((x, y) => (x.hospital?.desdeMs || 0) - (y.hospital?.desdeMs || 0));
+  $("panelHospital").innerHTML = an.length ? `<h3>🏥 En hospital (${an.length})</h3>` + an.map(a => {
+    const d = a.hospital?.desdeMs ? Math.floor((Date.now() - a.hospital.desdeMs) / DIA) : null;
+    const trat = sanidad.filter(s => (s.animales || []).includes(a.id) && a.hospital?.desdeMs && s.fechaMs >= a.hospital.desdeMs - DIA);
+    return `<div class="card" style="border-color:#b03a2e"><div class="fila"><b>${esc(a.arete)}${a.nombre ? " · " + esc(a.nombre) : ""}</b>
+      <span class="chip ${d > 7 ? "mal" : "amar"}">${d != null ? d + " día" + (d === 1 ? "" : "s") : "—"}</span></div>
+      <div class="sub">${esc(a.hospital?.motivo || "Sin motivo")}${a.hospital?.diagnostico ? " · " + esc(a.hospital.diagnostico) : ""}</div>
+      <div class="sub">Viene de: ${esc(nombreLote(a.loteAnterior))}${trat.length ? " · Tratamientos: " + trat.map(t => esc(t.producto)).join(", ") : ""}</div>
+      ${retiroHasta(a.id) ? `<div class="sub">Retiro hasta ${fecha(retiroHasta(a.id))}</div>` : ""}
+      <div class="dos" style="margin-top:8px"><button class="btn verde peq" data-alta="${a.id}">✔ Dar de alta</button><button class="btn gris peq" data-ver="${a.id}">Ver ficha</button></div></div>`;
+  }).join("") : "";
+}
+
+function renderMaternidad() {
+  const ml = [...lotes.values()].filter(l => l.tipo === "maternidad").map(l => l.id);
+  const an = [...animales.values()].filter(a => a.estado === "activo" && ml.includes(a.lote));
+  if (!an.length) { $("panelMaternidad").innerHTML = ""; return; }
+  const madres = an.filter(a => a.sexo === "Hembra" && an.some(c => c.madre && String(c.madre).toLowerCase() === String(a.arete).toLowerCase()) || (a.sexo === "Hembra" && !a.madre));
+  const usados = new Set();
+  let html = `<h3>🍼 Maternidad (${an.length})</h3>`;
+  madres.forEach(m => {
+    const crias = an.filter(c => c.madre && String(c.madre).toLowerCase() === String(m.arete).toLowerCase());
+    usados.add(m.id); crias.forEach(c => usados.add(c.id));
+    const parto = repro.filter(e => e.animalId === m.id && e.tipo === "parto").sort((x, y) => y.fechaMs - x.fechaMs)[0];
+    const d = parto ? Math.floor((Date.now() - parto.fechaMs) / DIA) : null;
+    html += `<div class="card" style="border-color:#8E44AD"><div class="fila"><b>🐄 ${esc(m.arete)}${m.nombre ? " · " + esc(m.nombre) : ""}</b>${d != null ? `<span class="chip">${d} días posparto</span>` : ""}</div>
+      <div class="sub">Crías: ${crias.length ? crias.map(c => `<b style="color:#fff">${esc(c.arete)}</b> (${esc(c.sexo || "—")}${c.fechaNacMs ? ", " + Math.floor((Date.now() - c.fechaNacMs) / DIA) + " días" : ""})`).join(", ") : "sin cría registrada"}</div>
+      <div class="dos" style="margin-top:8px"><button class="btn peq" style="background:#8E44AD" data-salmat="${m.id}">Salida de maternidad</button><button class="btn gris peq" data-ver="${m.id}">Ver ficha</button></div></div>`;
+  });
+  const otros = an.filter(a => !usados.has(a.id));
+  if (otros.length) html += `<div class="card"><b>Otros en maternidad</b>${otros.map(o => `<div class="fila" style="margin-top:6px"><span>${esc(o.arete)} · ${esc(o.sexo || "")}</span><button class="btn gris peq" data-salmat="${o.id}">Sacar</button></div>`).join("")}</div>`;
+  $("panelMaternidad").innerHTML = html;
+}
+
+function renderMovs() {
+  const l = [...movimientos].sort((a, b) => b.fechaMs - a.fechaMs).slice(0, 20);
+  $("listaMovs").innerHTML = l.length ? "<table><tr><th>Fecha</th><th>Movimiento</th><th>Detalle</th></tr>" + l.map(m => {
+    const det = m.tipo === "rotacion" ? `Lote ${esc(nombreLote(m.loteId))}: ${esc(nombrePotrero(m.dePotrero))} → <b>${esc(nombrePotrero(m.aPotrero))}</b>`
+      : `${esc((m.aretes || []).slice(0, 6).join(", "))}${(m.aretes || []).length > 6 ? "…" : ""}: ${esc(nombreLote(m.deLote))} → <b>${esc(nombreLote(m.aLote))}</b>${m.motivo ? " · " + esc(m.motivo) : ""}`;
+    return `<tr><td>${fecha(m.fechaMs)}</td><td>${ICONO_MOV[m.tipo] || ""} ${esc(TIPOS_MOV[m.tipo] || m.tipo)}</td><td>${det}</td></tr>`;
+  }).join("") + "</table>" : '<div class="vacio">Todavía no hay movimientos.</div>';
+}
+
+// ---------------- Formularios ----------------
+$("btnRotar").onclick = () => formRotar();
+$("btnMoverAn").onclick = () => formMoverAnimales([]);
+$("btnHospital").onclick = () => formHospital([]);
+$("btnMaternidad").onclick = () => formMoverAnimales([], "maternidad");
+
+function opcionesPotreroEstado(sel) {
+  return [...potreros.values()].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(p => {
+    const e = estadoPotrero(p.id);
+    const txt = e.ocupado ? `ocupado (${e.lotes.map(l => l.nombre).join(", ")})` : e.dias != null ? `descanso ${e.dias} d${e.listo ? " ✔" : ""}` : "libre";
+    return `<option value="${p.id}" ${p.id === sel ? "selected" : ""}>${esc(p.nombre)} — ${esc(txt)}</option>`;
+  }).join("");
+}
+
+function formRotar(loteId) {
+  const ls = [...lotes.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  if (!ls.length) return alert("Primero crea un lote.");
+  if (!potreros.size) return alert("Primero crea los potreros.");
+  abrirModal(`<h2>🔄 Rotar lote de potrero</h2>
+    <label>Lote</label><select id="rtLote">${ls.map(l => `<option value="${l.id}" ${l.id === loteId ? "selected" : ""}>${esc(l.nombre)}</option>`).join("")}</select>
+    <div class="sub" id="rtActual" style="margin-top:6px"></div>
+    <label>Potrero de destino</label><select id="rtDestino">${opcionesPotreroEstado("")}</select>
+    <div class="dos"><div><label>Fecha</label><input id="rtFecha" type="date" value="${hoyISO()}"></div><div><label>Motivo</label><input id="rtMotivo" placeholder="Ej: rotación"></div></div>
+    <button class="btn verde" id="rtOk">Mover lote</button><button class="btn gris" id="rtNo">Cancelar</button>`);
+  const actual = () => {
+    const l = lotes.get($("rtLote").value), n = [...animales.values()].filter(a => a.estado === "activo" && a.lote === l.id).length;
+    $("rtActual").innerHTML = `Está en: <b style="color:#fff">${esc(nombrePotrero(l.potrero))}</b> · ${n} animales`;
+  };
+  $("rtLote").onchange = actual; actual();
+  $("rtNo").onclick = cerrarModal;
+  $("rtOk").onclick = () => {
+    const l = lotes.get($("rtLote").value), dest = $("rtDestino").value;
+    if (l.potrero === dest) return alert("El lote ya está en ese potrero.");
+    const e = estadoPotrero(dest), p = potreros.get(dest);
+    if (e.ocupado && !confirm(`${p.nombre} está ocupado por ${e.lotes.map(x => x.nombre).join(", ")}. ¿Juntar los lotes ahí?`)) return;
+    if (!e.ocupado && p.descanso && e.dias != null && e.dias < p.descanso && !confirm(`${p.nombre} lleva ${e.dias} días de descanso (recomendado ${p.descanso}). ¿Mover igual?`)) return;
+    const f = $("rtFecha").value === hoyISO() ? Date.now() : (isoAms($("rtFecha").value) || Date.now());
+    registrarRotacion(l.id, l.potrero || "", dest, f, $("rtMotivo").value.trim());
+    updateDoc(doc(db, "lotes", l.id), { potrero: dest }).catch(errorGuardar);
+    l.potrero = dest;
+    cerrarModal(); renderLotes();
+  };
+}
+
+function formMoverAnimales(pre, destinoTipo) {
+  const ls = [...lotes.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const destinoId = destinoTipo ? ([...lotes.values()].find(l => l.tipo === destinoTipo)?.id || "__nuevo_" + destinoTipo) : "";
+  abrirModal(`<h2>${destinoTipo === "maternidad" ? "🍼 Ingresar a maternidad" : "↔️ Mover animales"}</h2>
+    <label>Lote de destino</label>
+    <select id="mvDestino">${destinoId.startsWith("__nuevo") ? `<option value="${destinoId}">Maternidad (se crea)</option>` : ""}${ls.map(l => `<option value="${l.id}" ${l.id === destinoId ? "selected" : ""}>${esc(l.nombre)}${l.tipo === "hospital" ? " 🏥" : l.tipo === "maternidad" ? " 🍼" : ""}</option>`).join("")}</select>
+    <div class="dos"><div><label>Mostrar del lote</label><select id="mvOrigen"><option value="">Todos</option>${opcionesLote("", false)}</select></div>
+      <div><label>Buscar arete</label><input id="mvBuscar" placeholder="Arete"></div></div>
+    <div class="fila" style="margin-top:8px"><span class="sub" id="mvCuenta"></span><button class="btn gris peq" id="mvTodos">Marcar todos</button></div>
+    <div id="mvLista" style="margin-top:6px;max-height:38vh;overflow-y:auto"></div>
+    <div class="dos"><div><label>Fecha</label><input id="mvFecha" type="date" value="${hoyISO()}"></div><div><label>Motivo</label><input id="mvMotivo" placeholder="${destinoTipo === "maternidad" ? "Ej: parto próximo" : "Ej: destete, clasificación"}"></div></div>
+    <button class="btn verde" id="mvOk">Mover</button><button class="btn gris" id="mvNo">Cancelar</button>`);
+  const marcados = new Set(pre);
+  const pintar = () => {
+    const o = $("mvOrigen").value, b = $("mvBuscar").value.trim().toLowerCase(), dest = $("mvDestino").value;
+    const an = [...animales.values()].filter(a => a.estado === "activo" && a.lote !== dest && (!o || a.lote === o) && (!b || String(a.arete).toLowerCase().includes(b)))
+      .sort((x, y) => String(x.arete).localeCompare(String(y.arete), "es", { numeric: true }));
+    $("mvLista").innerHTML = an.length ? an.map(a => `<label class="card chk" style="margin:0 0 6px;color:#e8f0ea;font-size:15px">
+      <input type="checkbox" data-id="${a.id}" ${marcados.has(a.id) ? "checked" : ""}><span style="flex:1"><b>${esc(a.arete)}</b> · ${esc(a.sexo || "")}<br><span class="sub">${esc(nombreLote(a.lote))}</span></span></label>`).join("")
+      : '<div class="vacio">No hay animales con ese filtro.</div>';
+    $("mvCuenta").textContent = marcados.size + " marcados";
+  };
+  $("mvLista").onchange = e => { const id = e.target.dataset.id; if (id) { e.target.checked ? marcados.add(id) : marcados.delete(id); $("mvCuenta").textContent = marcados.size + " marcados"; } };
+  $("mvOrigen").onchange = pintar; $("mvBuscar").oninput = pintar; $("mvDestino").onchange = pintar;
+  $("mvTodos").onclick = () => { $("mvLista").querySelectorAll("input[data-id]").forEach(x => { x.checked = true; marcados.add(x.dataset.id); }); $("mvCuenta").textContent = marcados.size + " marcados"; };
+  $("mvNo").onclick = cerrarModal;
+  $("mvOk").onclick = () => {
+    if (!marcados.size) return alert("Marca al menos un animal.");
+    let dest = $("mvDestino").value;
+    if (dest.startsWith("__nuevo_")) dest = loteEspecial(dest.replace("__nuevo_", ""));
+    if (lotes.get(dest)?.tipo === "hospital") { cerrarModal(); return formHospital([...marcados]); }
+    const f = $("mvFecha").value === hoyISO() ? Date.now() : (isoAms($("mvFecha").value) || Date.now());
+    const n = moverAnimales([...marcados], dest, { motivo: $("mvMotivo").value.trim(), fechaMs: f });
+    cerrarModal(); alert(`✔ ${n} animal(es) movidos a ${nombreLote(dest)}.`); refrescar();
+  };
+  pintar();
+}
+
+function formHospital(pre) {
+  const lista = new Set(pre);
+  abrirModal(`<h2>🏥 Ingreso a hospital</h2>
+    <label>Arete</label>
+    <div class="fila"><input id="hoArete" list="dlAretes" autocomplete="off" placeholder="Escribe el arete"><button class="btn peq" id="hoMas">Agregar</button></div>
+    <div id="hoLista" style="margin-top:8px"></div>
+    <div class="dos">
+      <div><label>Motivo *</label><select id="hoMotivo"><option>Enfermo</option><option>En observación</option><option>Lesionado / cojera</option><option>Problema posparto</option><option>Bajo de peso</option><option>Otro</option></select></div>
+      <div><label>Fecha</label><input id="hoFecha" type="date" value="${hoyISO()}"></div>
+    </div>
+    <label>Diagnóstico / síntomas</label><input id="hoDiag" placeholder="Ej: fiebre, diarrea, neumonía...">
+    <label class="chk" style="color:#e8f0ea;font-size:15px;margin-top:12px"><input type="checkbox" id="hoTrat"> 💉 Registrar tratamiento ahora</label>
+    <div id="hoTratBox" class="oculto">
+      <div class="dos"><div><label>Producto</label><input id="hoProd"></div><div><label>Dosis</label><input id="hoDosis"></div></div>
+      <div class="dos"><div><label>Días de retiro</label><input id="hoRet" type="number" inputmode="numeric"></div><div><label>Costo ($)</label><input id="hoCosto" type="number" inputmode="decimal"></div></div>
+      <label>Próxima aplicación</label><input id="hoProx" type="date">
+    </div>
+    <button class="btn rojo" id="hoOk">Ingresar al hospital</button><button class="btn gris" id="hoNo">Cancelar</button>`);
+  const pintar = () => {
+    $("hoLista").innerHTML = lista.size ? [...lista].map(id => { const a = animales.get(id); return `<span class="chip" style="margin:0 6px 6px 0;padding:6px 10px">${esc(a.arete)} <b data-q="${id}" style="cursor:pointer">✕</b></span>`; }).join("") : '<div class="sub">Agrega uno o varios aretes.</div>';
+  };
+  $("hoLista").onclick = e => { if (e.target.dataset.q) { lista.delete(e.target.dataset.q); pintar(); } };
+  $("hoMas").onclick = () => {
+    const a = buscarArete($("hoArete").value);
+    if (!a) return alert("Arete no registrado.");
+    if (a.estado !== "activo") return alert("Ese animal no está activo.");
+    if (lotes.get(a.lote)?.tipo === "hospital") return alert("Ya está en el hospital.");
+    lista.add(a.id); $("hoArete").value = ""; pintar();
+  };
+  $("hoTrat").onchange = () => $("hoTratBox").classList.toggle("oculto", !$("hoTrat").checked);
+  $("hoNo").onclick = cerrarModal;
+  $("hoOk").onclick = () => {
+    if (!lista.size && $("hoArete").value.trim()) $("hoMas").click();
+    if (!lista.size) return alert("Agrega al menos un animal.");
+    if ($("hoTrat").checked && !$("hoProd").value.trim()) return alert("Indica el producto del tratamiento.");
+    const f = $("hoFecha").value === hoyISO() ? Date.now() : (isoAms($("hoFecha").value) || Date.now());
+    const ids = [...lista], hosp = loteEspecial("hospital");
+    moverAnimales(ids, hosp, { motivo: $("hoMotivo").value, detalle: $("hoDiag").value.trim(), fechaMs: f });
+    if ($("hoTrat").checked) {
+      setDoc(doc(collection(db, "sanidad")), {
+        aplicaA: "animal", loteId: "", animales: ids, aretes: ids.map(id => animales.get(id).arete), tipo: "tratamiento", producto: $("hoProd").value.trim(),
+        dosis: $("hoDosis").value.trim(), fechaMs: f, proximaMs: isoAms($("hoProx").value), retiroDias: Number($("hoRet").value) || 0,
+        costo: Number($("hoCosto").value) || 0, notas: "Hospital: " + $("hoMotivo").value + ($("hoDiag").value.trim() ? " · " + $("hoDiag").value.trim() : ""), usuario, creadoMs: Date.now()
+      }).catch(errorGuardar);
+    }
+    cerrarModal(); refrescar();
+  };
+  pintar();
+}
+
+function formAlta(id) {
+  const a = animales.get(id);
+  const normales = [...lotes.values()].filter(l => l.tipo !== "hospital").sort((x, y) => x.nombre.localeCompare(y.nombre));
+  const def = lotes.get(a.loteAnterior)?.tipo !== "hospital" ? a.loteAnterior : "";
+  abrirModal(`<h2>✔ Alta de hospital · ${esc(a.arete)}</h2>
+    <div class="sub">${esc(a.hospital?.motivo || "")}${a.hospital?.diagnostico ? " · " + esc(a.hospital.diagnostico) : ""}${a.hospital?.desdeMs ? " · desde " + fecha(a.hospital.desdeMs) : ""}</div>
+    <label>Resultado</label><select id="alRes"><option>Recuperado</option><option>Mejorado, sigue en control</option><option>Sin enfermedad (observación)</option></select>
+    <label>Vuelve al lote</label><select id="alLote">${normales.map(l => `<option value="${l.id}" ${l.id === def ? "selected" : ""}>${esc(l.nombre)}</option>`).join("")}</select>
+    <label>Notas</label><input id="alNotas">
+    <button class="btn verde" id="alOk">Dar de alta</button><button class="btn gris" id="alNo">Cancelar</button>`);
+  $("alNo").onclick = cerrarModal;
+  $("alOk").onclick = () => {
+    if (!$("alLote").value) return alert("Elige el lote de destino.");
+    moverAnimales([id], $("alLote").value, { tipo: "hospital_alta", motivo: $("alRes").value, detalle: $("alNotas").value.trim() });
+    cerrarModal(); refrescar();
+  };
+}
+
+function formSalidaMaternidad(id) {
+  const m = animales.get(id), ml = m.lote;
+  const crias = [...animales.values()].filter(c => c.estado === "activo" && c.lote === ml && c.madre && String(c.madre).toLowerCase() === String(m.arete).toLowerCase());
+  const normales = [...lotes.values()].filter(l => !l.tipo).sort((x, y) => x.nombre.localeCompare(y.nombre));
+  const ops = sel => normales.map(l => `<option value="${l.id}" ${l.id === sel ? "selected" : ""}>${esc(l.nombre)}</option>`).join("");
+  const def = lotes.get(m.loteAnterior) && !lotes.get(m.loteAnterior).tipo ? m.loteAnterior : "";
+  abrirModal(`<h2>🍼 Salida de maternidad</h2>
+    <label>${esc(m.arete)}${m.sexo === "Hembra" ? " (madre)" : ""} va al lote</label><select id="smMadre">${ops(def)}</select>
+    ${crias.length ? `<label>Crías (${crias.map(c => esc(c.arete)).join(", ")})</label>
+      <select id="smCrias"><option value="__igual">Con la madre</option><option value="__quedan">Se quedan en maternidad</option>${ops("")}</select>
+      <label class="chk" style="color:#e8f0ea;font-size:15px;margin-top:10px"><input type="checkbox" id="smDestete"> Registrar el destete de las crías</label>` : ""}
+    <label>Fecha</label><input id="smFecha" type="date" value="${hoyISO()}">
+    <button class="btn verde" id="smOk">Confirmar salida</button><button class="btn gris" id="smNo">Cancelar</button>`);
+  $("smNo").onclick = cerrarModal;
+  $("smOk").onclick = () => {
+    const dm = $("smMadre").value;
+    if (!dm) return alert("Crea primero un lote normal para recibirla.");
+    const f = $("smFecha").value === hoyISO() ? Date.now() : (isoAms($("smFecha").value) || Date.now());
+    moverAnimales([m.id], dm, { motivo: "Salida de maternidad", fechaMs: f });
+    if (crias.length) {
+      const dc = $("smCrias").value;
+      if (dc !== "__quedan") moverAnimales(crias.map(c => c.id), dc === "__igual" ? dm : dc, { motivo: $("smDestete").checked ? "Destete" : "Salida de maternidad", detalle: "Madre " + m.arete, fechaMs: f });
+      if ($("smDestete").checked) crias.forEach(c => setDoc(doc(collection(db, "reproduccion")), { animalId: m.id, arete: m.arete, tipo: "destete", fechaMs: f, cria: c.arete, notas: "Salida de maternidad", usuario, creadoMs: Date.now() }).catch(errorGuardar));
+    }
+    cerrarModal(); refrescar();
+  };
 }
 </script>
 </body>
