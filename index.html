@@ -86,7 +86,7 @@
 
 <!-- ================= APP ================= -->
 <div id="app" class="oculto">
-<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.7</small><br><span id="sync">☁️ Sincronizado</span></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
+<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.8</small><br><span id="sync">☁️ Sincronizado</span></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
 <div id="bannerDemo" class="oculto" style="background:#7a6420;color:#fff;font-size:13px;padding:7px 14px;text-align:center">MODO DEMO · los datos se guardan solo en este teléfono</div>
 <main>
 
@@ -353,6 +353,11 @@
     <button class="btn verde" id="btnGenerar">📥 Generar Excel</button>
     <button class="btn oculto" id="btnCompartir">📤 Compartir (WhatsApp, correo...)</button>
     <div class="sub" id="rEstadoTxt" style="margin-top:10px;text-align:center"></div>
+    <div class="card" style="margin-top:20px">
+      <b>🔄 Sincronización</b>
+      <div class="sub" style="margin-top:4px">La app solo descarga los cambios nuevos. Si notas datos que faltan o sobran, vuelve a descargar todo.</div>
+      <button class="btn gris" id="btnResync">Volver a descargar todos los datos</button>
+    </div>
   </section>
 
   <!-- ---------- SANIDAD ---------- -->
@@ -437,6 +442,7 @@ const DEMO = firebaseConfig.apiKey === "PEGAR_AQUI";
 const USAR_LOGIN = true;
 
 let esperarPendientes = null;
+let getDocsFromCache, getDocsFromServer, serverTimestamp, Timestamp;
 let db, auth, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs,
     signInWithEmailAndPassword, onAuthStateChanged, signOut;
 
@@ -469,12 +475,12 @@ if (!DEMO) {
   }
   // Base de datos con caché local: funciona sin señal y sube los datos cuando vuelve la conexión
   try {
-    db = fs.initializeFirestore(app, { localCache: fs.persistentLocalCache({ tabManager: fs.persistentMultipleTabManager() }) });
+    db = fs.initializeFirestore(app, { localCache: fs.persistentLocalCache({ tabManager: fs.persistentMultipleTabManager(), cacheSizeBytes: fs.CACHE_SIZE_UNLIMITED }) });
   } catch (e) {
     console.warn("Sin caché local, usando memoria:", e);
     db = fs.getFirestore(app);
   }
-  ({ collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs } = fs);
+  ({ collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs, getDocsFromCache, getDocsFromServer, serverTimestamp, Timestamp } = fs);
   esperarPendientes = () => fs.waitForPendingWrites(db);
 } else {
   // ---------- MODO DEMO: imita Firestore guardando en el teléfono ----------
@@ -486,7 +492,7 @@ if (!DEMO) {
   const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const snap = (col, conds = []) => {
     const docs = Object.entries(store[col] || {})
-      .filter(([, d]) => conds.every(c => d[c.f] === c.v))
+      .filter(([, d]) => conds.every(c => { const x = d[c.f]; return c.op === ">=" ? x >= c.v : c.op === "<=" ? x <= c.v : c.op === ">" ? x > c.v : c.op === "<" ? x < c.v : x === c.v; }))
       .map(([id, d]) => ({ id, data: () => JSON.parse(JSON.stringify(d)) }));
     return { docs, forEach: fn => docs.forEach(fn) };
   };
@@ -497,7 +503,7 @@ if (!DEMO) {
   setDoc = async (ref, data) => { (store[ref.col] ||= {})[ref.id] = { ...data }; guardar(); avisar(ref.col); };
   updateDoc = async (ref, data) => { const c = (store[ref.col] ||= {}); c[ref.id] = { ...(c[ref.id] || {}), ...data }; guardar(); avisar(ref.col); };
   deleteDoc = async ref => { if (store[ref.col]) delete store[ref.col][ref.id]; guardar(); avisar(ref.col); };
-  where = (f, _op, v) => ({ f, v });
+  where = (f, op, v) => ({ f, op, v });
   query = (colRef, ...conds) => ({ ...colRef, conds });
   getDocs = async q => snap(q.name, q.conds || []);
   onSnapshot = (colRef, cb) => {
@@ -525,12 +531,6 @@ function estadoSync() {
   else { el.textContent = "☁️ Sincronizado"; el.className = ""; }
 }
 function seguir(p) { pendientes++; estadoSync(); return p.finally(() => { pendientes--; estadoSync(); }); }
-{
-  const s0 = setDoc, u0 = updateDoc, d0 = deleteDoc;
-  setDoc = (...a) => seguir(s0(...a));
-  updateDoc = (...a) => seguir(u0(...a));
-  deleteDoc = (...a) => seguir(d0(...a));
-}
 window.addEventListener("online", estadoSync);
 window.addEventListener("offline", estadoSync);
 // Cambios guardados en una sesión anterior sin señal: se avisa hasta que Firebase confirme que subieron
@@ -575,6 +575,91 @@ let ventas = [];
 let movimientos = [];
 let desuscribir = [];
 
+// ======================================================================
+//  SINCRONIZACIÓN INCREMENTAL
+//  Al abrir, los datos salen del teléfono (caché) y de Firebase solo se
+//  descarga lo que cambió desde la última vez. Cada escritura lleva la hora
+//  del servidor ("actualizado") y los borrados son lógicos ("borrado").
+// ======================================================================
+const SINC = ["animales", "lotes", "potreros", "reproduccion", "sanidad", "ventas", "movimientos"];
+const mapRepro = new Map(), mapSanidad = new Map(), mapVentas = new Map(), mapMovs = new Map();
+const tienda = c => ({ animales, lotes, potreros, reproduccion: mapRepro, sanidad: mapSanidad, ventas: mapVentas, movimientos: mapMovs })[c];
+function regenerar() { repro = [...mapRepro.values()]; sanidad = [...mapSanidad.values()]; ventas = [...mapVentas.values()]; movimientos = [...mapMovs.values()]; }
+function aplicar(col, id, data) { const m = tienda(col); if (!data || data.borrado) m.delete(id); else m.set(id, { id, ...data }); }
+let refrescoPend = false;
+function pedirRefresco() {
+  if (refrescoPend) return;
+  refrescoPend = true;
+  setTimeout(() => { refrescoPend = false; regenerar(); refrescar(); }, 60);
+}
+const colDe = ref => ref?.parent?.id || ref?.col;
+{
+  const s0 = setDoc, u0 = updateDoc, d0 = deleteDoc;
+  const marca = data => DEMO ? data : { ...data, actualizado: serverTimestamp() };
+  setDoc = (ref, data, ...r) => {
+    const c = colDe(ref);
+    if (SINC.includes(c)) { data = marca(data); const prev = tienda(c).get(ref.id); aplicar(c, ref.id, data); if (prev && tienda(c).get(ref.id) !== prev) { Object.assign(prev, data); tienda(c).set(ref.id, prev); } pedirRefresco(); }
+    return seguir(s0(ref, data, ...r));
+  };
+  updateDoc = (ref, data) => {
+    const c = colDe(ref);
+    if (SINC.includes(c)) { data = marca(data); const prev = tienda(c).get(ref.id); if (prev) Object.assign(prev, data); pedirRefresco(); }
+    return seguir(u0(ref, data));
+  };
+  deleteDoc = ref => {
+    const c = colDe(ref);
+    if (SINC.includes(c) && !DEMO) { tienda(c).delete(ref.id); pedirRefresco(); return seguir(u0(ref, { borrado: true, actualizado: serverTimestamp() })); }
+    if (SINC.includes(c)) { tienda(c).delete(ref.id); pedirRefresco(); }
+    return seguir(d0(ref));
+  };
+}
+const claveSync = col => `sync_${firebaseConfig.projectId}_${col}`;
+function maxActualizado(docs) {
+  let m = 0;
+  docs.forEach(d => { if (d.metadata?.hasPendingWrites) return; const t = d.get ? d.get("actualizado") : null; if (t && t.toMillis) m = Math.max(m, t.toMillis()); });
+  return m;
+}
+async function sincronizar(col) {
+  const err = e => console.warn("sync " + col, e);
+  let ultimo = 0;
+  try { ultimo = Number(localStorage.getItem(claveSync(col))) || 0; } catch (_) {}
+  // 1) Base: lo que ya está guardado en el teléfono (no gasta lecturas)
+  if (ultimo) {
+    try {
+      const c = await getDocsFromCache(collection(db, col));
+      if (c.empty) ultimo = 0; else c.forEach(d => aplicar(col, d.id, d.data()));
+    } catch (e) { ultimo = 0; }
+  }
+  // 2) Primera vez en este teléfono: descarga completa
+  if (!ultimo) {
+    try {
+      const s = await getDocsFromServer(collection(db, col));
+      tienda(col).clear(); s.forEach(d => aplicar(col, d.id, d.data()));
+      ultimo = maxActualizado(s.docs) || 1;
+      try { localStorage.setItem(claveSync(col), ultimo); } catch (_) {}
+    } catch (e) {
+      // Sin internet la primera vez: se escucha la colección completa en esta sesión
+      desuscribir.push(onSnapshot(collection(db, col), s => { tienda(col).clear(); s.forEach(d => aplicar(col, d.id, d.data())); pedirRefresco(); }, err));
+      pedirRefresco();
+      return;
+    }
+  }
+  pedirRefresco();
+  // 3) Solo los cambios desde la última sincronización (con 1 minuto de margen)
+  const q = query(collection(db, col), where("actualizado", ">", Timestamp.fromMillis(Math.max(0, ultimo - 60000))));
+  desuscribir.push(onSnapshot(q, s => {
+    s.docChanges().forEach(ch => { if (ch.type !== "removed") aplicar(col, ch.doc.id, ch.doc.data()); });
+    const m = maxActualizado(s.docs);
+    if (m > ultimo) { ultimo = m; try { localStorage.setItem(claveSync(col), m); } catch (_) {} }
+    pedirRefresco();
+  }, err));
+}
+function resincronizarTodo() {
+  if (!confirm("Se volverán a descargar todos los datos desde Firebase. Úsalo solo si notas datos que faltan o sobran. ¿Continuar?")) return;
+  try { SINC.forEach(c => localStorage.removeItem(claveSync(c))); } catch (_) {}
+  location.reload();
+}
+
 const nombreLote = id => lotes.get(id)?.nombre || "Sin lote";
 const nombrePotrero = id => potreros.get(id)?.nombre || "—";
 const buscarArete = a => {
@@ -609,28 +694,14 @@ onAuthStateChanged(auth, u => {
 });
 
 function escuchar() {
-  const err = e => console.error(e);
-  desuscribir.push(onSnapshot(collection(db, "animales"), s => {
-    animales.clear(); s.forEach(d => animales.set(d.id, { id: d.id, ...d.data() })); refrescar();
-  }, err));
-  desuscribir.push(onSnapshot(collection(db, "lotes"), s => {
-    lotes.clear(); s.forEach(d => lotes.set(d.id, { id: d.id, ...d.data() })); refrescar();
-  }, err));
-  desuscribir.push(onSnapshot(collection(db, "potreros"), s => {
-    potreros.clear(); s.forEach(d => potreros.set(d.id, { id: d.id, ...d.data() })); refrescar();
-  }, err));
-  desuscribir.push(onSnapshot(collection(db, "reproduccion"), s => {
-    repro = []; s.forEach(d => repro.push({ id: d.id, ...d.data() })); refrescar();
-  }, err));
-  desuscribir.push(onSnapshot(collection(db, "sanidad"), s => {
-    sanidad = []; s.forEach(d => sanidad.push({ id: d.id, ...d.data() })); refrescar();
-  }, err));
-  desuscribir.push(onSnapshot(collection(db, "movimientos"), s => {
-    movimientos = []; s.forEach(d => movimientos.push({ id: d.id, ...d.data() })); refrescar();
-  }, err));
-  desuscribir.push(onSnapshot(collection(db, "ventas"), s => {
-    ventas = []; s.forEach(d => ventas.push({ id: d.id, ...d.data() })); refrescar();
-  }, err));
+  SINC.forEach(c => tienda(c).clear()); regenerar();
+  if (DEMO) {
+    SINC.forEach(col => desuscribir.push(onSnapshot(collection(db, col), s => {
+      tienda(col).clear(); s.forEach(d => aplicar(col, d.id, d.data())); pedirRefresco();
+    }, e => console.error(e))));
+    return;
+  }
+  SINC.forEach(col => sincronizar(col));
 }
 
 function refrescar() {
@@ -645,7 +716,7 @@ function refrescar() {
   renderEspera();
   avisoEsperaVentas();
   const v = document.querySelector(".vista.activa")?.id;
-  if (v === "v-animales") renderAnimales();
+  if (v === "v-animales") renderAnimales(true);
   if (v === "v-lotes") renderLotes();
   if (v === "v-repro") renderRepro();
   if (v === "v-sanidad") renderSanidad();
@@ -886,7 +957,7 @@ $("btnGuardar").onclick = () => {
   // Guardado sin esperar respuesta: si no hay señal, queda en el teléfono y sube después
   setDoc(doc(collection(db, "pesadas")), {
     animalId: a.id, arete: a.arete, peso, fechaMs: ahora, lote: a.lote || "",
-    sesionId: sesion ? sesion.id : null, gdp, usuario, ...(paraVenta ? { tipo: "preventa" } : {})
+    sesionId: sesion ? sesion.id : null, gdp, usuario, pesoAnterior: a.pesoActual ?? null, fechaAnteriorMs: a.fechaUltPeso ?? null, ...(paraVenta ? { tipo: "preventa" } : {})
   }).catch(errorGuardar);
   const cambiosA = { pesoActual: peso, fechaUltPeso: ahora, pesoInicial: pIni, fechaPesoInicial: fIni, gdpUltima: gdp ?? a.gdpUltima ?? null, gdpTotal };
   if (paraVenta) Object.assign(cambiosA, { enEsperaVenta: true, pesoEspera: peso, fechaEspera: ahora });
@@ -920,18 +991,21 @@ function crearAnimal(datos) {
   return conId;
 }
 
-$("buscar").oninput = renderAnimales;
+let tBuscar = null;
+$("buscar").oninput = () => { clearTimeout(tBuscar); tBuscar = setTimeout(renderAnimales, 200); };
 $("filtroLote").onchange = renderAnimales;
 $("filtroEstado").onchange = renderAnimales;
 
-function renderAnimales() {
+let limiteAnimales = 100;
+function renderAnimales(mas) {
+  if (mas !== true) limiteAnimales = 100;
   const t = $("buscar").value.trim().toLowerCase();
   const fl = $("filtroLote").value, fe = $("filtroEstado").value;
   const lista = [...animales.values()]
     .filter(a => (!fe || a.estado === fe) && (!fl || a.lote === fl) && (!t || String(a.arete).toLowerCase().includes(t) || String(a.nombre || "").toLowerCase().includes(t)))
     .sort((a, b) => String(a.arete).localeCompare(String(b.arete), "es", { numeric: true }));
-  $("cuentaAnimales").textContent = lista.length + " animales";
-  $("listaAnimales").innerHTML = lista.length ? lista.map(a => {
+  $("cuentaAnimales").textContent = lista.length + " animales" + (lista.length > limiteAnimales ? ` · mostrando ${limiteAnimales}` : "");
+  $("listaAnimales").innerHTML = lista.length ? lista.slice(0, limiteAnimales).map(a => {
     const obj = lotes.get(a.lote)?.pesoObjetivo;
     return `<div class="card click" data-id="${a.id}">
       <div class="fila"><b>${esc(a.arete)} ${a.nombre ? "· " + esc(a.nombre) : ""}</b><b>${kg(a.pesoActual)}</b></div>
@@ -940,9 +1014,13 @@ function renderAnimales() {
       ${a.estado === "activo" && lotes.get(a.lote)?.tipo === "hospital" ? '<div style="margin-top:6px"><span class="chip mal">🏥 Hospital</span></div>' : ""}
       ${a.estado === "activo" && lotes.get(a.lote)?.tipo === "maternidad" ? '<div style="margin-top:6px"><span class="chip" style="background:#8E44AD">🍼 Maternidad</span></div>' : ""}
     </div>`;
-  }).join("") : '<div class="vacio">No hay animales con ese filtro.</div>';
+  }).join("") + (lista.length > limiteAnimales ? `<button class="btn gris" id="btnMasAnimales">Mostrar ${Math.min(100, lista.length - limiteAnimales)} más</button>` : "")
+    : '<div class="vacio">No hay animales con ese filtro.</div>';
 }
-$("listaAnimales").onclick = e => { const c = e.target.closest("[data-id]"); if (c) abrirDetalle(c.dataset.id); };
+$("listaAnimales").onclick = e => {
+  if (e.target.id === "btnMasAnimales") { limiteAnimales += 100; return renderAnimales(true); }
+  const c = e.target.closest("[data-id]"); if (c) abrirDetalle(c.dataset.id);
+};
 $("btnNuevoAnimal").onclick = () => formAnimal(null);
 
 function formAnimal(id) {
@@ -1334,10 +1412,15 @@ function retiroHasta(animalId) {
 }
 
 // Una próxima aplicación está cumplida si después se registró el mismo producto a esos animales
+let indiceProd = null, indiceVersion = null;
 function proximaCumplida(r) {
-  const prod = String(r.producto || "").toLowerCase();
-  return sanidad.some(o => o.id !== r.id && o.fechaMs > r.fechaMs && String(o.producto || "").toLowerCase() === prod &&
-    (o.animales || []).some(x => (r.animales || []).includes(x)));
+  if (indiceVersion !== sanidad) {   // índice por producto, se rehace solo cuando cambia la lista
+    indiceProd = new Map();
+    sanidad.forEach(o => { const k = String(o.producto || "").toLowerCase(); (indiceProd.get(k) || indiceProd.set(k, []).get(k)).push(o); });
+    indiceVersion = sanidad;
+  }
+  const mios = new Set(r.animales || []);
+  return (indiceProd.get(String(r.producto || "").toLowerCase()) || []).some(o => o.id !== r.id && o.fechaMs > r.fechaMs && (o.animales || []).some(x => mios.has(x)));
 }
 
 function destinoSan(r) { return r.aplicaA === "lote" ? "Lote " + nombreLote(r.loteId) + ` (${(r.animales || []).length})` : (r.aretes || []).join(", ") || "—"; }
@@ -1777,6 +1860,7 @@ function periodo(p) {
 }
 document.querySelectorAll("[data-per]").forEach(b => b.onclick = () => periodo(b.dataset.per));
 $("btnReportes").onclick = () => ir("reportes");
+$("btnResync").onclick = () => { if (DEMO) return alert("En modo demo no aplica."); resincronizarTodo(); };
 $("rTodas").onclick = () => HOJAS_REP.forEach(([id]) => $("rh_" + id).checked = true);
 
 $("btnGenerar").onclick = async () => {
@@ -1812,16 +1896,17 @@ async function armarExcel() {
   const loteId = id => loteDe(animales.get(id));
 
   $("rEstadoTxt").textContent = "Leyendo pesadas...";
-  const sp = await getDocs(collection(db, "pesadas"));
-  const todasPes = sp.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.fechaMs - b.fechaMs);
+  // Solo se descargan las pesadas del período (cada pesada ya trae guardado su peso anterior)
+  const sp = await getDocs(desde ? query(collection(db, "pesadas"), where("fechaMs", ">=", desde)) : collection(db, "pesadas"));
+  const todasPes = sp.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.fechaMs <= hasta).sort((a, b) => a.fechaMs - b.fechaMs);
   let sesiones = [];
-  if (incl("sesiones")) { const ss = await getDocs(collection(db, "sesiones")); sesiones = ss.docs.map(d => ({ id: d.id, ...d.data() })); }
+  if (incl("sesiones")) { const ss = await getDocs(desde ? query(collection(db, "sesiones"), where("inicioMs", ">=", desde)) : collection(db, "sesiones")); sesiones = ss.docs.map(d => ({ id: d.id, ...d.data() })); }
   $("rEstadoTxt").textContent = "Construyendo el Excel...";
 
   const anims = [...animales.values()].filter(a => (!loteF || a.lote === loteF) && (!soloAct || a.estado === "activo"))
     .sort((a, b) => String(a.arete).localeCompare(String(b.arete), "es", { numeric: true }));
   const activosLote = [...animales.values()].filter(a => a.estado === "activo" && (!loteF || a.lote === loteF));
-  const cuentaPes = {}; todasPes.forEach(p => cuentaPes[p.animalId] = (cuentaPes[p.animalId] || 0) + 1);
+  const cuentaPes = {}; todasPes.forEach(p => { if (enRango(p.fechaMs)) cuentaPes[p.animalId] = (cuentaPes[p.animalId] || 0) + 1; });
   const pesPeriodo = todasPes.filter(p => enRango(p.fechaMs) && (!loteF || (p.lote || loteId(p.animalId)) === loteF));
   const ventasLineas = [];
   ventas.filter(v => enRango(v.fechaMs)).forEach(v => (v.animales || []).forEach(a => { if (!loteF || a.lote === loteF) ventasLineas.push({ v, a }); }));
@@ -1917,7 +2002,7 @@ async function armarExcel() {
       { t: "Estado", w: 10 }, { t: "Peso inicial", w: 11, tipo: "kg" }, { t: "Fecha peso inicial", w: 12, tipo: "fecha" }, { t: "Peso actual", w: 11, tipo: "kg", b: 1 },
       { t: "Último pesaje", w: 12, tipo: "fecha" }, { t: "Kg ganados", w: 11, tipo: "dif" }, { t: "Días en control", w: 10, tipo: "num" }, { t: "GDP total", w: 13, tipo: "gdp", b: 1 },
       { t: "GDP última", w: 13, tipo: "gdp" }, { t: "Peso objetivo", w: 11, tipo: "kg" }, { t: "% del objetivo", w: 10, tipo: "pct" }, { t: "Listo venta", w: 9, h: "center" },
-      { t: "Estado reproductivo", w: 13 }, { t: "Parto estimado", w: 12, tipo: "fecha" }, { t: "En retiro hasta", w: 12, tipo: "fecha" }, { t: "N° pesadas", w: 9, tipo: "num" },
+      { t: "Estado reproductivo", w: 13 }, { t: "Parto estimado", w: 12, tipo: "fecha" }, { t: "En retiro hasta", w: 12, tipo: "fecha" }, { t: "Pesadas en el período", w: 10, tipo: "num" },
       { t: "Fecha de baja", w: 12, tipo: "fecha" }, { t: "Causa / detalle de baja", w: 20 }, { t: "Notas", w: 24, wrap: 1 }
     ];
     const filas = anims.map(a => {
@@ -1942,7 +2027,7 @@ async function armarExcel() {
   if (incl("pesadas")) {
     const previa = {}, filas = [];
     for (const p of todasPes) {
-      const ant = previa[p.animalId]; previa[p.animalId] = p;
+      const ant = p.pesoAnterior != null ? { peso: p.pesoAnterior, fechaMs: p.fechaAnteriorMs } : previa[p.animalId]; previa[p.animalId] = p;
       if (!enRango(p.fechaMs) || (loteF && (p.lote || loteId(p.animalId)) !== loteF)) continue;
       const a = animales.get(p.animalId), dif = ant ? p.peso - ant.peso : null, d = ant ? (p.fechaMs - ant.fechaMs) / DIA : null;
       filas.push([aFecha(p.fechaMs), p.arete, a?.nombre || "", nombreLote(p.lote || a?.lote), p.peso, ant ? ant.peso : null, dif, d != null ? Math.round(d) : null,
