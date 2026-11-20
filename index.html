@@ -7,6 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Báscula Ganadera</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body { margin: 0; font-family: system-ui, sans-serif; background: #0f1a14; color: #e8f0ea; padding-bottom: calc(80px + env(safe-area-inset-bottom)); overscroll-behavior-y: contain; user-select: none; }
@@ -63,6 +66,10 @@
   #modalBody { background: #13261b; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; border-radius: 16px 16px 0 0; padding: 16px 16px 24px; }
   #login { max-width: 380px; margin: 60px auto; padding: 20px; }
   .oculto { display: none !important; }
+  #sync { display: inline-block; margin-top: 3px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #1e6b3d; color: #fff; }
+  #sync.off { background: #8a4b12; } #sync.sube { background: #7a6420; }
+  #avisoVersion { position: fixed; left: 12px; right: 12px; bottom: 86px; z-index: 30; background: #2e86de; color: #fff; padding: 12px 14px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
+  #avisoVersion button { background: #fff; color: #2e86de; border: 0; border-radius: 8px; padding: 8px 12px; font-weight: 700; }
   svg text { fill: #8fb39c; font-size: 10px; }
 </style>
 </head>
@@ -79,7 +86,7 @@
 
 <!-- ================= APP ================= -->
 <div id="app" class="oculto">
-<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.3.1</small></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
+<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.4</small><br><span id="sync">☁️ Sincronizado</span></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
 <div id="bannerDemo" class="oculto" style="background:#7a6420;color:#fff;font-size:13px;padding:7px 14px;text-align:center">MODO DEMO · los datos se guardan solo en este teléfono</div>
 <main>
 
@@ -308,6 +315,7 @@
 </nav>
 </div>
 
+<div id="avisoVersion" class="oculto"><span>Hay una versión nueva de la app</span><button onclick="location.reload()">Actualizar</button></div>
 <div id="modal"><div id="modalBody"></div></div>
 <datalist id="dlAretes"></datalist>
 <datalist id="dlHembras"></datalist>
@@ -315,6 +323,7 @@
 <script>
   // Si algo falla al arrancar, mostrarlo en pantalla en lugar de quedar en negro
   function mostrarFallo(msg) {
+    if (window.__arrancado) { console.warn(msg); return; }   // después del arranque no tapar la app
     if (document.getElementById("fallo")) return;
     const d = document.createElement("div");
     d.id = "fallo";
@@ -352,6 +361,7 @@ const DEMO = firebaseConfig.apiKey === "PEGAR_AQUI";
 // Login con correo y contraseña (Firebase Authentication)
 const USAR_LOGIN = true;
 
+let esperarPendientes = null;
 let db, auth, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs,
     signInWithEmailAndPassword, onAuthStateChanged, signOut;
 
@@ -390,6 +400,7 @@ if (!DEMO) {
     db = fs.getFirestore(app);
   }
   ({ collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs } = fs);
+  esperarPendientes = () => fs.waitForPendingWrites(db);
 } else {
   // ---------- MODO DEMO: imita Firestore guardando en el teléfono ----------
   const K = "bascula_ganadera_demo";
@@ -424,6 +435,43 @@ if (!DEMO) {
   signOut = () => {
     if (confirm("¿Borrar TODOS los datos de prueba de este teléfono?")) { localStorage.removeItem(K); location.reload(); }
   };
+}
+
+// ======================================================================
+//  SINCRONIZACIÓN: cuántos cambios faltan por subir a Firebase
+// ======================================================================
+let pendientes = 0, pendientesPrevios = false;
+function estadoSync() {
+  const el = document.getElementById("sync"); if (!el) return;
+  const n = pendientes;
+  if (DEMO) { el.textContent = "📱 Solo en este teléfono"; el.className = "sube"; return; }
+  if (!navigator.onLine) { el.textContent = "📴 Sin conexión" + (n ? ` · ${n} por subir` : pendientesPrevios ? " · datos por subir" : ""); el.className = "off"; }
+  else if (n || pendientesPrevios) { el.textContent = "⏳ Subiendo" + (n ? ` ${n} cambio${n > 1 ? "s" : ""}` : " datos") + "..."; el.className = "sube"; }
+  else { el.textContent = "☁️ Sincronizado"; el.className = ""; }
+}
+function seguir(p) { pendientes++; estadoSync(); return p.finally(() => { pendientes--; estadoSync(); }); }
+{
+  const s0 = setDoc, u0 = updateDoc, d0 = deleteDoc;
+  setDoc = (...a) => seguir(s0(...a));
+  updateDoc = (...a) => seguir(u0(...a));
+  deleteDoc = (...a) => seguir(d0(...a));
+}
+window.addEventListener("online", estadoSync);
+window.addEventListener("offline", estadoSync);
+// Cambios guardados en una sesión anterior sin señal: se avisa hasta que Firebase confirme que subieron
+if (esperarPendientes) {
+  pendientesPrevios = true; estadoSync();
+  esperarPendientes().then(() => { pendientesPrevios = false; estadoSync(); }).catch(() => { pendientesPrevios = false; estadoSync(); });
+}
+setTimeout(estadoSync, 0);
+
+// ---------------- App instalable y sin internet (service worker) ----------------
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  const habiaControl = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register("sw.js").catch(e => console.warn("Sin modo offline:", e));
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (habiaControl) document.getElementById("avisoVersion").classList.remove("oculto");
+  });
 }
 
 // ---------------- Utilidades ----------------
@@ -466,7 +514,7 @@ const buscarArete = a => {
 $("btnLogin").onclick = async () => {
   $("logError").textContent = "";
   try { await signInWithEmailAndPassword(auth, $("logCorreo").value.trim(), $("logClave").value); }
-  catch (e) { $("logError").textContent = "No se pudo entrar: revisa el correo y la contraseña."; }
+  catch (e) { $("logError").textContent = navigator.onLine ? "No se pudo entrar: revisa el correo y la contraseña." : "Sin internet: la primera vez que entras en este teléfono necesitas conexión. Después funciona sin señal."; }
 };
 $("btnSalir").onclick = () => { if (DEMO) signOut(auth); else if (confirm("¿Cerrar sesión?")) signOut(auth); };
 if (!DEMO && !USAR_LOGIN) $("btnSalir").classList.add("oculto");
@@ -476,6 +524,7 @@ if (DEMO) {
 }
 
 onAuthStateChanged(auth, u => {
+  window.__arrancado = true;
   desuscribir.forEach(f => f()); desuscribir = [];
   if (!u) { $("app").classList.add("oculto"); $("login").classList.remove("oculto"); return; }
   usuario = u.email;
