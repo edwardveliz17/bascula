@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#173524">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Báscula Ganadera</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: #0f1a14; color: #e8f0ea; padding-bottom: calc(80px + env(safe-area-inset-bottom)); overscroll-behavior-y: contain; user-select: none; }
+  input, textarea { user-select: text; }
+  header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #173524; }
+  header b { font-size: 18px; }
+  header button { background: none; border: 1px solid #3d6b50; color: #cfe3d6; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+  main { padding: 14px; max-width: 640px; margin: auto; }
+  .vista { display: none; }
+  .vista.activa { display: block; }
+  h2 { font-size: 19px; margin: 6px 0 12px; }
+  h3 { font-size: 16px; margin: 20px 0 8px; color: #b9dcc6; }
+  .card { background: #13261b; border: 1px solid #234a33; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .card.click { cursor: pointer; }
+  .fila { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .sub { font-size: 13px; color: #8fb39c; }
+  .chip { display: inline-block; font-size: 12px; padding: 3px 8px; border-radius: 20px; background: #234a33; color: #cfe3d6; }
+  .chip.ok { background: #1e6b3d; } .chip.mal { background: #7a2a2a; } .chip.amar { background: #7a6420; }
+  .estado { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 10px; }
+  .punto { width: 12px; height: 12px; border-radius: 50%; background: #c0392b; flex: none; }
+  .punto.ok { background: #2ecc71; }
+  .visor { background: #000; border-radius: 14px; padding: 18px 12px; text-align: center; border: 2px solid #234a33; }
+  .peso { font-family: "Courier New", monospace; font-size: 60px; font-weight: 700; color: #39ff7a; }
+  .unidad { font-size: 22px; color: #8fbf9f; }
+  .estab { margin-top: 4px; font-size: 15px; font-weight: 600; color: #f1c40f; }
+  .estab.si { color: #2ecc71; }
+  button.btn { width: 100%; padding: 14px; font-size: 16px; font-weight: 700; border: 0; border-radius: 10px; margin-top: 10px; cursor: pointer; color: #fff; background: #2e86de; }
+  button.verde { background: #27ae60; } button.gris { background: #555; } button.rojo { background: #b03a2e; } button.peq { padding: 9px; font-size: 14px; width: auto; margin-top: 0; }
+  button:disabled { opacity: .4; }
+  input, select, textarea { width: 100%; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid #2d5a3f; background: #0f1f16; color: #fff; margin-top: 4px; font-family: inherit; }
+  label { display: block; font-size: 13px; color: #8fb39c; margin-top: 10px; }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; margin-top: 8px; }
+  .stats div { background: #0f1f16; border-radius: 8px; padding: 8px 2px; }
+  .stats b { display: block; font-size: 17px; }
+  .stats span { font-size: 11px; color: #8fb39c; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { padding: 7px 5px; border-bottom: 1px solid #234a33; text-align: left; }
+  th { color: #8fb39c; font-weight: 600; font-size: 12px; }
+  .resultado { background: #12331f; border: 1px solid #2ecc71; border-radius: 12px; padding: 12px; margin-top: 10px; display: none; }
+  .aviso { background: #5a1f1f; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 10px; }
+  .vacio { color: #6d8f78; font-size: 14px; padding: 10px 0; }
+  nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; padding-bottom: env(safe-area-inset-bottom); background: #173524; border-top: 1px solid #2d5a3f; z-index: 5; }
+  nav button { flex: 1; background: none; border: 0; color: #8fb39c; padding: 8px 0 10px; font-size: 12px; }
+  nav button span { display: block; font-size: 22px; }
+  nav button.activo { color: #39ff7a; }
+  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: flex-end; justify-content: center; z-index: 20; }
+  #modal.abierto { display: flex; }
+  #modalBody { background: #13261b; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; border-radius: 16px 16px 0 0; padding: 16px 16px 24px; }
+  #login { max-width: 380px; margin: 60px auto; padding: 20px; }
+  .oculto { display: none !important; }
+  svg text { fill: #8fb39c; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login" class="oculto">
+  <h2 style="text-align:center">🐄 Báscula Ganadera</h2>
+  <label>Correo</label><input id="logCorreo" type="email" autocomplete="username">
+  <label>Contraseña</label><input id="logClave" type="password" autocomplete="current-password">
+  <button class="btn verde" id="btnLogin">Entrar</button>
+  <div class="sub" id="logError" style="margin-top:10px;color:#ff8a80"></div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app" class="oculto">
+<header><b>🐄 Báscula Ganadera</b><button id="btnSalir">Salir</button></header>
+<div id="bannerDemo" class="oculto" style="background:#7a6420;color:#fff;font-size:13px;padding:7px 14px;text-align:center">MODO DEMO · los datos se guardan solo en este teléfono</div>
+<main>
+
+  <!-- ---------- PESAR ---------- -->
+  <section class="vista activa" id="v-pesar">
+    <div id="avisoBT" class="aviso oculto"></div>
+    <div class="estado"><div class="punto" id="punto"></div><span id="txtEstado">Báscula desconectada</span></div>
+    <div class="visor">
+      <div><span class="peso" id="peso">----</span> <span class="unidad">kg</span></div>
+      <div class="estab" id="estab">—</div>
+    </div>
+    <div class="fila" style="margin-top:6px">
+      <button class="btn" id="btnCon">Conectar báscula</button>
+      <button class="btn oculto" id="btnRec">Reconectar</button>
+      <button class="btn gris oculto" id="btnDes">Desconectar</button>
+    </div>
+
+    <label>Modo de pesaje</label>
+    <select id="modo">
+      <option value="ind">Individual</option>
+      <option value="lote">Por lote (sesión)</option>
+    </select>
+
+    <div id="panelLote" class="card oculto" style="margin-top:10px">
+      <div id="sesionInactiva">
+        <label style="margin-top:0">Lote a pesar</label>
+        <select id="sesLote"></select>
+        <button class="btn verde" id="btnIniSes">Iniciar sesión de pesaje</button>
+      </div>
+      <div id="sesionActiva" class="oculto">
+        <div class="fila"><b id="sesTitulo">Sesión</b><button class="btn rojo peq" id="btnFinSes">Terminar</button></div>
+        <div class="stats">
+          <div><b id="sCant">0</b><span>Pesados</span></div>
+          <div><b id="sProm">—</b><span>Promedio</span></div>
+          <div><b id="sMin">—</b><span>Mínimo</span></div>
+          <div><b id="sMax">—</b><span>Máximo</span></div>
+        </div>
+        <div class="sub" id="sFaltan" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <label>Arete del animal</label>
+    <input id="arete" list="dlAretes" placeholder="Escribe o elige el arete" autocomplete="off">
+    <div id="infoAnimal" class="sub" style="margin-top:6px"></div>
+    <button class="btn verde" id="btnGuardar" disabled>Guardar pesada</button>
+    <div class="resultado" id="resultado"></div>
+
+    <div id="listaSesion"></div>
+  </section>
+
+  <!-- ---------- ANIMALES ---------- -->
+  <section class="vista" id="v-animales">
+    <div class="fila"><h2>Animales</h2><button class="btn verde peq" id="btnNuevoAnimal">+ Nuevo</button></div>
+    <input id="buscar" placeholder="Buscar por arete o nombre">
+    <div class="dos" style="margin-top:6px">
+      <select id="filtroLote"></select>
+      <select id="filtroEstado">
+        <option value="activo">Activos</option>
+        <option value="vendido">Vendidos</option>
+        <option value="muerto">Muertos</option>
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="sub" id="cuentaAnimales" style="margin:10px 0 6px"></div>
+    <div id="listaAnimales"></div>
+  </section>
+
+  <!-- ---------- DETALLE ANIMAL ---------- -->
+  <section class="vista" id="v-detalle">
+    <button class="btn gris peq" id="btnVolver">← Volver</button>
+    <div id="detalle"></div>
+  </section>
+
+  <!-- ---------- LOTES ---------- -->
+  <section class="vista" id="v-lotes">
+    <div class="fila"><h2>Lotes</h2><button class="btn verde peq" id="btnNuevoLote">+ Lote</button></div>
+    <div id="listaLotes"></div>
+    <div class="fila"><h3>Potreros</h3><button class="btn verde peq" id="btnNuevoPotrero">+ Potrero</button></div>
+    <div id="listaPotreros"></div>
+  </section>
+
+  <!-- ---------- REPRODUCCIÓN ---------- -->
+  <section class="vista" id="v-repro">
+    <div class="fila"><h2>Reproducción</h2><button class="btn verde peq" id="btnNuevoEvento">+ Evento</button></div>
+    <div class="stats" id="resumenRepro"></div>
+    <h3>Próximos partos</h3>
+    <div id="proxPartos"></div>
+    <h3>Últimos eventos</h3>
+    <div id="ultEventos"></div>
+  </section>
+
+</main>
+
+<nav>
+  <button data-v="pesar" class="activo"><span>⚖️</span>Pesar</button>
+  <button data-v="animales"><span>🐄</span>Animales</button>
+  <button data-v="lotes"><span>📋</span>Lotes</button>
+  <button data-v="repro"><span>🧬</span>Reproducción</button>
+</nav>
+</div>
+
+<div id="modal"><div id="modalBody"></div></div>
+<datalist id="dlAretes"></datalist>
+<datalist id="dlHembras"></datalist>
+
+<script>
+  // Si algo falla al arrancar, mostrarlo en pantalla en lugar de quedar en negro
+  function mostrarFallo(msg) {
+    if (document.getElementById("fallo")) return;
+    const d = document.createElement("div");
+    d.id = "fallo";
+    d.style.cssText = "position:fixed;inset:0;z-index:99;background:#0f1a14;color:#e8f0ea;padding:30px 20px;font-family:system-ui;text-align:center";
+    d.innerHTML = "<h2>🐄 Báscula Ganadera</h2><p>La app no pudo iniciar.</p><p style='color:#ff8a80;font-size:14px;word-break:break-word'></p>" +
+      "<button onclick='location.reload()' style='padding:12px 20px;font-size:16px;border:0;border-radius:10px;background:#2e86de;color:#fff'>Reintentar</button>";
+    d.querySelector("p:nth-of-type(2)").textContent = msg;
+    document.body.appendChild(d);
+  }
+  window.addEventListener("error", e => mostrarFallo(e.message || "Error desconocido"));
+  window.addEventListener("unhandledrejection", e => mostrarFallo((e.reason && e.reason.message) || String(e.reason)));
+  // Si a los 12 segundos no apareció ni el login ni la app, avisar
+  setTimeout(() => {
+    const login = document.getElementById("login"), app = document.getElementById("app");
+    if (login.classList.contains("oculto") && app.classList.contains("oculto"))
+      mostrarFallo("Firebase no respondió. Abre la app desde su enlace web (Firebase Hosting) o revisa la conexión.");
+  }, 12000);
+</script>
+<script type="module">
+// ======================================================================
+//  CONFIGURACIÓN DE FIREBASE  →  pega aquí el firebaseConfig del proyecto
+//  Mientras apiKey diga "PEGAR_AQUI", la app funciona en MODO DEMO:
+//  sin login y guardando los datos solo en este teléfono (para probar).
+// ======================================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyA8YRcE8wfwoB-zURgn4_kSo36TQaxeR9M",
+  authDomain: "bascula-gandera.firebaseapp.com",
+  projectId: "bascula-gandera",
+  storageBucket: "bascula-gandera.firebasestorage.app",
+  messagingSenderId: "100829814440",
+  appId: "1:100829814440:web:023a559a0567c3d9be6c9d",
+  measurementId: "G-08HW20XZMF"
+};
+const DEMO = firebaseConfig.apiKey === "PEGAR_AQUI";
+// Login con correo y contraseña (Firebase Authentication)
+const USAR_LOGIN = true;
+
+let db, auth, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs,
+    signInWithEmailAndPassword, onAuthStateChanged, signOut;
+
+if (!DEMO) {
+  const V = "https://www.gstatic.com/firebasejs/10.12.2/";
+  let fa, fs;
+  try {
+    fa = await import(V + "firebase-app.js");
+    fs = await import(V + "firebase-firestore.js");
+  } catch (e) {
+    document.body.innerHTML = `<div style="padding:30px 20px;text-align:center;font-family:system-ui;color:#e8f0ea">
+      <h2>🐄 Báscula Ganadera</h2>
+      <p>No se pudo cargar Firebase.</p>
+      <p style="color:#8fb39c;font-size:14px">Revisa la conexión a internet la primera vez y abre la app en <b>Google Chrome</b>
+      (no en la vista previa de otra aplicación).</p>
+      <button onclick="location.reload()" style="padding:12px 20px;font-size:16px;border:0;border-radius:10px;background:#2e86de;color:#fff">Reintentar</button></div>`;
+    throw e;
+  }
+  const app = fa.initializeApp(firebaseConfig);
+  if (USAR_LOGIN) {
+    const fu = await import(V + "firebase-auth.js");
+    auth = fu.getAuth(app);
+    ({ signInWithEmailAndPassword, onAuthStateChanged, signOut } = fu);
+  } else {
+    // Sin login (temporal): entra directo
+    auth = {};
+    signInWithEmailAndPassword = async () => {};
+    onAuthStateChanged = (_a, cb) => setTimeout(() => cb({ email: "sin-login" }), 0);
+    signOut = () => {};
+  }
+  // Base de datos con caché local: funciona sin señal y sube los datos cuando vuelve la conexión
+  try {
+    db = fs.initializeFirestore(app, { localCache: fs.persistentLocalCache({ tabManager: fs.persistentMultipleTabManager() }) });
+  } catch (e) {
+    console.warn("Sin caché local, usando memoria:", e);
+    db = fs.getFirestore(app);
+  }
+  ({ collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs } = fs);
+} else {
+  // ---------- MODO DEMO: imita Firestore guardando en el teléfono ----------
+  const K = "bascula_ganadera_demo";
+  let store = {};
+  try { store = JSON.parse(localStorage.getItem(K) || "{}"); } catch (_) { store = {}; }
+  const oyentes = {};
+  const guardar = () => { try { localStorage.setItem(K, JSON.stringify(store)); } catch (_) {} };
+  const nuevoId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const snap = (col, conds = []) => {
+    const docs = Object.entries(store[col] || {})
+      .filter(([, d]) => conds.every(c => d[c.f] === c.v))
+      .map(([id, d]) => ({ id, data: () => JSON.parse(JSON.stringify(d)) }));
+    return { docs, forEach: fn => docs.forEach(fn) };
+  };
+  const avisar = col => (oyentes[col] || []).forEach(cb => cb(snap(col)));
+  db = { demo: true }; auth = {};
+  collection = (_db, name) => ({ tipo: "col", name });
+  doc = (a, b, c) => a && a.tipo === "col" ? { col: a.name, id: nuevoId() } : { col: b, id: c };
+  setDoc = async (ref, data) => { (store[ref.col] ||= {})[ref.id] = { ...data }; guardar(); avisar(ref.col); };
+  updateDoc = async (ref, data) => { const c = (store[ref.col] ||= {}); c[ref.id] = { ...(c[ref.id] || {}), ...data }; guardar(); avisar(ref.col); };
+  deleteDoc = async ref => { if (store[ref.col]) delete store[ref.col][ref.id]; guardar(); avisar(ref.col); };
+  where = (f, _op, v) => ({ f, v });
+  query = (colRef, ...conds) => ({ ...colRef, conds });
+  getDocs = async q => snap(q.name, q.conds || []);
+  onSnapshot = (colRef, cb) => {
+    (oyentes[colRef.name] ||= []).push(cb);
+    setTimeout(() => cb(snap(colRef.name)), 0);
+    return () => { oyentes[colRef.name] = oyentes[colRef.name].filter(x => x !== cb); };
+  };
+  signInWithEmailAndPassword = async () => {};
+  onAuthStateChanged = (_a, cb) => setTimeout(() => cb({ email: "demo" }), 0);
+  signOut = () => {
+    if (confirm("¿Borrar TODOS los datos de prueba de este teléfono?")) { localStorage.removeItem(K); location.reload(); }
+  };
+}
+
+// ---------------- Utilidades ----------------
+const $ = id => document.getElementById(id);
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const DIA = 86400000;
+const GESTACION = 283;   // días de gestación bovina
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const num = (n, d = 0) => (n == null || isNaN(n)) ? "—" : Number(n).toLocaleString("es-VE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const kg = n => n == null ? "—" : num(n, 0) + " kg";
+const gdpTxt = g => g == null ? "—" : (g >= 0 ? "+" : "") + num(g, 2) + " kg/día";
+const fecha = ms => ms ? new Date(ms).toLocaleDateString("es-VE") : "—";
+const hoyISO = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+const isoAms = s => s ? new Date(s + "T12:00:00").getTime() : null;
+const msAiso = ms => ms ? new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 10) : "";
+const errorGuardar = e => { console.error(e); alert("No se pudo guardar: " + e.message); };
+
+// ---------------- Datos en memoria (se llenan en tiempo real) ----------------
+let usuario = "";
+const animales = new Map();
+const lotes = new Map();
+const potreros = new Map();
+let repro = [];
+let desuscribir = [];
+
+const nombreLote = id => lotes.get(id)?.nombre || "Sin lote";
+const nombrePotrero = id => potreros.get(id)?.nombre || "—";
+const buscarArete = a => {
+  const x = String(a || "").trim().toLowerCase();
+  if (!x) return null;
+  for (const an of animales.values()) if (String(an.arete).toLowerCase() === x) return an;
+  return null;
+};
+
+// ======================================================================
+//  LOGIN
+// ======================================================================
+$("btnLogin").onclick = async () => {
+  $("logError").textContent = "";
+  try { await signInWithEmailAndPassword(auth, $("logCorreo").value.trim(), $("logClave").value); }
+  catch (e) { $("logError").textContent = "No se pudo entrar: revisa el correo y la contraseña."; }
+};
+$("btnSalir").onclick = () => { if (DEMO) signOut(auth); else if (confirm("¿Cerrar sesión?")) signOut(auth); };
+if (!DEMO && !USAR_LOGIN) $("btnSalir").classList.add("oculto");
+if (DEMO) {
+  $("btnSalir").textContent = "Borrar demo";
+  $("bannerDemo").classList.remove("oculto");
+}
+
+onAuthStateChanged(auth, u => {
+  desuscribir.forEach(f => f()); desuscribir = [];
+  if (!u) { $("app").classList.add("oculto"); $("login").classList.remove("oculto"); return; }
+  usuario = u.email;
+  $("login").classList.add("oculto"); $("app").classList.remove("oculto");
+  escuchar();
+});
+
+function escuchar() {
+  const err = e => console.error(e);
+  desuscribir.push(onSnapshot(collection(db, "animales"), s => {
+    animales.clear(); s.forEach(d => animales.set(d.id, { id: d.id, ...d.data() })); refrescar();
+  }, err));
+  desuscribir.push(onSnapshot(collection(db, "lotes"), s => {
+    lotes.clear(); s.forEach(d => lotes.set(d.id, { id: d.id, ...d.data() })); refrescar();
+  }, err));
+  desuscribir.push(onSnapshot(collection(db, "potreros"), s => {
+    potreros.clear(); s.forEach(d => potreros.set(d.id, { id: d.id, ...d.data() })); refrescar();
+  }, err));
+  desuscribir.push(onSnapshot(collection(db, "reproduccion"), s => {
+    repro = []; s.forEach(d => repro.push({ id: d.id, ...d.data() })); refrescar();
+  }, err));
+}
+
+function refrescar() {
+  const activos = [...animales.values()].filter(a => a.estado === "activo");
+  $("dlAretes").innerHTML = activos.map(a => `<option value="${esc(a.arete)}">${esc(a.nombre || "")}</option>`).join("");
+  $("dlHembras").innerHTML = activos.filter(a => a.sexo === "Hembra").map(a => `<option value="${esc(a.arete)}">${esc(a.nombre || "")}</option>`).join("");
+  const opLotes = '<option value="">Todos los lotes</option>' + [...lotes.values()].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(l => `<option value="${l.id}">${esc(l.nombre)}</option>`).join("");
+  const fl = $("filtroLote").value; $("filtroLote").innerHTML = opLotes; $("filtroLote").value = fl;
+  const sl = $("sesLote").value; $("sesLote").innerHTML = opcionesLote(sl, false);
+  mostrarInfoAnimal();
+  if (sesion) renderSesion();
+  const v = document.querySelector(".vista.activa")?.id;
+  if (v === "v-animales") renderAnimales();
+  if (v === "v-lotes") renderLotes();
+  if (v === "v-repro") renderRepro();
+  if (v === "v-detalle" && detalleId) renderDetalle(detalleId, false);
+}
+
+function opcionesLote(sel, conVacio = true) {
+  const ls = [...lotes.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  return (conVacio ? '<option value="">Sin lote</option>' : (ls.length ? "" : '<option value="">Crea un lote primero</option>')) +
+    ls.map(l => `<option value="${l.id}" ${l.id === sel ? "selected" : ""}>${esc(l.nombre)}</option>`).join("");
+}
+function opcionesPotrero(sel) {
+  return '<option value="">Sin potrero</option>' + [...potreros.values()].sort((a, b) => a.nombre.localeCompare(b.nombre))
+    .map(p => `<option value="${p.id}" ${p.id === sel ? "selected" : ""}>${esc(p.nombre)}</option>`).join("");
+}
+
+// ======================================================================
+//  NAVEGACIÓN Y MODAL
+// ======================================================================
+let detalleId = null;
+function ir(v) {
+  document.querySelectorAll(".vista").forEach(s => s.classList.remove("activa"));
+  $("v-" + v).classList.add("activa");
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("activo", b.dataset.v === v || (v === "detalle" && b.dataset.v === "animales")));
+  if (v === "animales") renderAnimales();
+  if (v === "lotes") renderLotes();
+  if (v === "repro") renderRepro();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => ir(b.dataset.v));
+
+function abrirModal(html) { $("modalBody").innerHTML = html; $("modal").classList.add("abierto"); }
+function cerrarModal() { $("modal").classList.remove("abierto"); $("modalBody").innerHTML = ""; }
+$("modal").onclick = e => { if (e.target.id === "modal") cerrarModal(); };
+
+// ======================================================================
+//  BÁSCULA BLUETOOTH (BLE)
+// ======================================================================
+const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+const CHAR_TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+let dispositivo = null, caracActual = null, desconexionManual = false;
+let pesoActual = null, estable = false, ultimas = [];
+
+if (!navigator.bluetooth) {
+  $("avisoBT").classList.remove("oculto");
+  $("avisoBT").textContent = "Este navegador no permite Bluetooth. Usa Google Chrome en Android.";
+  $("btnCon").disabled = true;
+}
+
+function conTiempo(p, ms) { return Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error("tiempo agotado")), ms))]); }
+
+async function conectarGatt(max) {
+  let ultimoError = null;
+  for (let i = 1; i <= max; i++) {
+    try {
+      $("txtEstado").textContent = `Conectando... intento ${i} de ${max}`;
+      if (dispositivo.gatt.connected) dispositivo.gatt.disconnect();
+      await esperar(300);
+      const srv = await conTiempo(dispositivo.gatt.connect(), 8000);
+      await esperar(600);
+      const servicio = await conTiempo(srv.getPrimaryService(SERVICE_UUID), 5000);
+      const carac = await conTiempo(servicio.getCharacteristic(CHAR_TX_UUID), 5000);
+      if (caracActual) caracActual.removeEventListener("characteristicvaluechanged", alRecibir);
+      carac.addEventListener("characteristicvaluechanged", alRecibir);
+      await conTiempo(carac.startNotifications(), 5000);
+      caracActual = carac;
+      $("punto").classList.add("ok");
+      $("txtEstado").textContent = "Conectado a " + (dispositivo.name || "báscula");
+      $("btnCon").classList.add("oculto"); $("btnRec").classList.add("oculto"); $("btnDes").classList.remove("oculto");
+      return true;
+    } catch (e) {
+      ultimoError = e;
+      try { dispositivo.gatt.disconnect(); } catch (_) {}
+      await esperar(1000 + i * 500);
+    }
+  }
+  $("txtEstado").textContent = "No se conectó: " + (ultimoError ? ultimoError.message : "sin respuesta");
+  $("btnRec").classList.remove("oculto"); $("btnCon").classList.remove("oculto");
+  return false;
+}
+
+$("btnCon").onclick = async () => {
+  try {
+    $("txtEstado").textContent = "Buscando dispositivos...";
+    const elegido = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SERVICE_UUID] });
+    if (dispositivo) dispositivo.removeEventListener("gattserverdisconnected", alDesconectar);
+    dispositivo = elegido;
+    dispositivo.addEventListener("gattserverdisconnected", alDesconectar);
+    desconexionManual = false;
+    await conectarGatt(5);
+  } catch (e) { $("txtEstado").textContent = "No se conectó: " + e.message; }
+};
+$("btnRec").onclick = async () => { if (!dispositivo) return; desconexionManual = false; $("btnRec").classList.add("oculto"); await conectarGatt(5); };
+$("btnDes").onclick = () => { desconexionManual = true; if (dispositivo?.gatt.connected) dispositivo.gatt.disconnect(); };
+
+async function alDesconectar() {
+  $("punto").classList.remove("ok"); $("btnDes").classList.add("oculto");
+  pesoActual = null; estable = false; ultimas = [];
+  $("peso").textContent = "----"; $("estab").textContent = "—"; $("estab").classList.remove("si");
+  actualizarBotonGuardar();
+  if (desconexionManual) {
+    $("txtEstado").textContent = "Báscula desconectada";
+    $("btnCon").classList.remove("oculto"); $("btnRec").classList.remove("oculto");
+    return;
+  }
+  $("txtEstado").textContent = "Se perdió la conexión, reconectando...";
+  await esperar(1500);
+  await conectarGatt(5);
+}
+
+function alRecibir(ev) {
+  const texto = new TextDecoder().decode(ev.target.value);
+  const m = texto.match(/-?\d+(\.\d+)?/);
+  if (!m) return;
+  const p = parseFloat(m[0]);
+  pesoActual = p;
+  $("peso").textContent = num(p, 0);
+  ultimas.push(p); if (ultimas.length > 2) ultimas.shift();
+  estable = ultimas.length === 2 && Math.max(...ultimas) - Math.min(...ultimas) <= 1;
+  $("estab").textContent = estable ? "✔ ESTABLE" : "Moviéndose...";
+  $("estab").classList.toggle("si", estable);
+  if (p <= 0) $("resultado").style.display = "none";
+  actualizarBotonGuardar();
+}
+
+// ======================================================================
+//  PESAJE (individual y por lote) + GANANCIA DIARIA DE PESO
+// ======================================================================
+let sesion = null;   // { id, loteId, inicioMs, pesos: [] }
+
+$("modo").onchange = () => {
+  const lote = $("modo").value === "lote";
+  $("panelLote").classList.toggle("oculto", !lote);
+  if (!lote && sesion && !confirm("Hay una sesión abierta. ¿Terminarla?")) { $("modo").value = "lote"; $("panelLote").classList.remove("oculto"); return; }
+  if (!lote && sesion) terminarSesion();
+};
+
+$("btnIniSes").onclick = () => {
+  const loteId = $("sesLote").value;
+  if (!loteId) return alert("Primero crea un lote en la pestaña Lotes.");
+  sesion = { id: doc(collection(db, "sesiones")).id, loteId, inicioMs: Date.now(), pesos: [] };
+  $("sesionInactiva").classList.add("oculto"); $("sesionActiva").classList.remove("oculto");
+  renderSesion();
+};
+$("btnFinSes").onclick = () => { if (confirm("¿Terminar la sesión de pesaje?")) terminarSesion(); };
+
+function statsDe(pesos) {
+  if (!pesos.length) return null;
+  const v = pesos.map(p => p.peso);
+  return { cant: v.length, prom: v.reduce((a, b) => a + b, 0) / v.length, min: Math.min(...v), max: Math.max(...v) };
+}
+
+function renderSesion() {
+  if (!sesion) { $("listaSesion").innerHTML = ""; return; }
+  const st = statsDe(sesion.pesos);
+  $("sesTitulo").textContent = "Pesando: " + nombreLote(sesion.loteId);
+  $("sCant").textContent = st ? st.cant : 0;
+  $("sProm").textContent = st ? num(st.prom) : "—";
+  $("sMin").textContent = st ? num(st.min) : "—";
+  $("sMax").textContent = st ? num(st.max) : "—";
+  const delLote = [...animales.values()].filter(a => a.estado === "activo" && a.lote === sesion.loteId);
+  const pesados = new Set(sesion.pesos.map(p => p.animalId));
+  const faltan = delLote.filter(a => !pesados.has(a.id));
+  $("sFaltan").textContent = faltan.length ? `Faltan ${faltan.length}: ${faltan.slice(0, 15).map(a => a.arete).join(", ")}${faltan.length > 15 ? "..." : ""}` : (delLote.length ? "✔ Todo el lote pesado" : "");
+  $("listaSesion").innerHTML = sesion.pesos.length ? `<h3>Pesados en esta sesión</h3><table><tr><th>Arete</th><th>Peso</th><th>GDP</th></tr>` +
+    [...sesion.pesos].reverse().map(p => `<tr><td>${esc(p.arete)}</td><td><b>${kg(p.peso)}</b></td><td>${gdpTxt(p.gdp)}</td></tr>`).join("") + "</table>" : "";
+}
+
+function terminarSesion() {
+  if (!sesion) return;
+  const st = statsDe(sesion.pesos);
+  if (st) {
+    setDoc(doc(db, "sesiones", sesion.id), {
+      loteId: sesion.loteId, inicioMs: sesion.inicioMs, finMs: Date.now(), cantidad: st.cant,
+      promedio: st.prom, minimo: st.min, maximo: st.max, usuario
+    }).catch(errorGuardar);
+    alert(`Sesión guardada\n${nombreLote(sesion.loteId)}: ${st.cant} animales\nPromedio ${num(st.prom)} kg · Mín ${num(st.min)} · Máx ${num(st.max)}`);
+  }
+  sesion = null;
+  $("sesionInactiva").classList.remove("oculto"); $("sesionActiva").classList.add("oculto");
+  renderSesion();
+}
+
+function mostrarInfoAnimal() {
+  const a = buscarArete($("arete").value);
+  const t = $("arete").value.trim();
+  if (!t) $("infoAnimal").innerHTML = "";
+  else if (!a) $("infoAnimal").innerHTML = '<span class="chip amar">Arete no registrado: se creará al guardar</span>';
+  else $("infoAnimal").innerHTML = `<b>${esc(a.nombre || a.arete)}</b> · ${esc(a.sexo || "")} · ${esc(nombreLote(a.lote))}<br>Último peso: ${kg(a.pesoActual)} (${fecha(a.fechaUltPeso)}) · GDP total: ${gdpTxt(a.gdpTotal)}`;
+  actualizarBotonGuardar();
+}
+$("arete").oninput = mostrarInfoAnimal;
+
+function actualizarBotonGuardar() {
+  $("btnGuardar").disabled = !(estable && pesoActual > 0 && $("arete").value.trim());
+}
+
+$("btnGuardar").onclick = () => {
+  const arete = $("arete").value.trim();
+  const peso = pesoActual;
+  if (!arete || !(peso > 0)) return;
+  let a = buscarArete(arete);
+  if (!a) {
+    if (!confirm(`El arete "${arete}" no está registrado. ¿Crear el animal y guardar la pesada?`)) return;
+    a = crearAnimal({ arete, lote: sesion ? sesion.loteId : "" });
+  }
+  if (sesion && sesion.pesos.some(p => p.animalId === a.id) && !confirm("Este animal ya se pesó en esta sesión. ¿Guardar otra vez?")) return;
+
+  const ahora = Date.now();
+  let dif = null, dias = null, gdp = null;
+  if (a.pesoActual != null && a.fechaUltPeso) {
+    dias = (ahora - a.fechaUltPeso) / DIA;
+    dif = peso - a.pesoActual;
+    if (dias >= 1) gdp = dif / dias;
+  }
+  const pIni = a.pesoInicial ?? peso;
+  const fIni = a.fechaPesoInicial ?? ahora;
+  const diasTot = (ahora - fIni) / DIA;
+  const gdpTotal = diasTot >= 1 ? (peso - pIni) / diasTot : (a.gdpTotal ?? null);
+
+  // Guardado sin esperar respuesta: si no hay señal, queda en el teléfono y sube después
+  setDoc(doc(collection(db, "pesadas")), {
+    animalId: a.id, arete: a.arete, peso, fechaMs: ahora, lote: a.lote || "",
+    sesionId: sesion ? sesion.id : null, gdp, usuario
+  }).catch(errorGuardar);
+  updateDoc(doc(db, "animales", a.id), {
+    pesoActual: peso, fechaUltPeso: ahora, pesoInicial: pIni, fechaPesoInicial: fIni,
+    gdpUltima: gdp ?? a.gdpUltima ?? null, gdpTotal
+  }).catch(errorGuardar);
+  Object.assign(a, { pesoActual: peso, fechaUltPeso: ahora, pesoInicial: pIni, fechaPesoInicial: fIni, gdpTotal });
+
+  if (sesion) { sesion.pesos.push({ animalId: a.id, arete: a.arete, peso, gdp }); renderSesion(); }
+
+  const objetivo = lotes.get(a.lote)?.pesoObjetivo;
+  let html = `<div class="fila"><b>✔ ${esc(a.arete)} · ${kg(peso)}</b>${objetivo && peso >= objetivo ? '<span class="chip ok">Listo para venta</span>' : ""}</div>`;
+  if (dif != null) html += `<div class="sub" style="margin-top:6px">Desde la pesada anterior: ${dif >= 0 ? "+" : ""}${num(dif)} kg en ${num(dias, dias < 10 ? 1 : 0)} días</div>`;
+  html += `<div class="sub">GDP: <b style="color:#fff">${gdpTxt(gdp)}</b> · GDP total: <b style="color:#fff">${gdpTxt(gdpTotal)}</b></div>`;
+  if (gdp != null && gdp < 0) html += '<div style="margin-top:6px"><span class="chip mal">⚠ Bajó de peso</span></div>';
+  if (dif == null) html += '<div class="sub">Primera pesada de este animal.</div>';
+  $("resultado").innerHTML = html; $("resultado").style.display = "block";
+
+  $("arete").value = ""; mostrarInfoAnimal();
+};
+
+// ======================================================================
+//  ANIMALES
+// ======================================================================
+function crearAnimal(datos) {
+  const ref = doc(collection(db, "animales"));
+  const a = { arete: "", nombre: "", sexo: "", raza: "", fechaNacMs: null, lote: "", madre: "", padre: "", estado: "activo", notas: "", creadoMs: Date.now(), ...datos };
+  setDoc(ref, a).catch(errorGuardar);
+  const conId = { id: ref.id, ...a };
+  animales.set(ref.id, conId);
+  return conId;
+}
+
+$("buscar").oninput = renderAnimales;
+$("filtroLote").onchange = renderAnimales;
+$("filtroEstado").onchange = renderAnimales;
+
+function renderAnimales() {
+  const t = $("buscar").value.trim().toLowerCase();
+  const fl = $("filtroLote").value, fe = $("filtroEstado").value;
+  const lista = [...animales.values()]
+    .filter(a => (!fe || a.estado === fe) && (!fl || a.lote === fl) && (!t || String(a.arete).toLowerCase().includes(t) || String(a.nombre || "").toLowerCase().includes(t)))
+    .sort((a, b) => String(a.arete).localeCompare(String(b.arete), "es", { numeric: true }));
+  $("cuentaAnimales").textContent = lista.length + " animales";
+  $("listaAnimales").innerHTML = lista.length ? lista.map(a => {
+    const obj = lotes.get(a.lote)?.pesoObjetivo;
+    return `<div class="card click" data-id="${a.id}">
+      <div class="fila"><b>${esc(a.arete)} ${a.nombre ? "· " + esc(a.nombre) : ""}</b><b>${kg(a.pesoActual)}</b></div>
+      <div class="fila sub" style="margin-top:4px"><span>${esc(a.sexo || "")} · ${esc(nombreLote(a.lote))}</span><span>GDP ${gdpTxt(a.gdpTotal)}</span></div>
+      ${obj && a.pesoActual >= obj && a.estado === "activo" ? '<div style="margin-top:6px"><span class="chip ok">Listo para venta</span></div>' : ""}
+    </div>`;
+  }).join("") : '<div class="vacio">No hay animales con ese filtro.</div>';
+}
+$("listaAnimales").onclick = e => { const c = e.target.closest("[data-id]"); if (c) abrirDetalle(c.dataset.id); };
+$("btnNuevoAnimal").onclick = () => formAnimal(null);
+
+function formAnimal(id) {
+  const a = id ? animales.get(id) : { estado: "activo", lote: $("filtroLote").value || "" };
+  abrirModal(`
+    <h2>${id ? "Editar animal" : "Nuevo animal"}</h2>
+    <div class="dos">
+      <div><label>Arete *</label><input id="fArete" value="${esc(a.arete)}"></div>
+      <div><label>Nombre</label><input id="fNombre" value="${esc(a.nombre)}"></div>
+    </div>
+    <div class="dos">
+      <div><label>Sexo</label><select id="fSexo"><option value="">—</option><option ${a.sexo === "Hembra" ? "selected" : ""}>Hembra</option><option ${a.sexo === "Macho" ? "selected" : ""}>Macho</option></select></div>
+      <div><label>Raza</label><input id="fRaza" value="${esc(a.raza)}"></div>
+    </div>
+    <div class="dos">
+      <div><label>Fecha de nacimiento</label><input id="fNac" type="date" value="${msAiso(a.fechaNacMs)}"></div>
+      <div><label>Lote</label><select id="fLote">${opcionesLote(a.lote)}</select></div>
+    </div>
+    <div class="dos">
+      <div><label>Madre (arete)</label><input id="fMadre" list="dlHembras" value="${esc(a.madre)}"></div>
+      <div><label>Padre (arete o toro)</label><input id="fPadre" value="${esc(a.padre)}"></div>
+    </div>
+    <label>Estado</label>
+    <select id="fEstado">
+      <option value="activo" ${a.estado === "activo" ? "selected" : ""}>Activo</option>
+      <option value="vendido" ${a.estado === "vendido" ? "selected" : ""}>Vendido</option>
+      <option value="muerto" ${a.estado === "muerto" ? "selected" : ""}>Muerto</option>
+    </select>
+    <label>Notas</label><textarea id="fNotas" rows="2">${esc(a.notas)}</textarea>
+    <button class="btn verde" id="fGuardar">Guardar</button>
+    ${id ? '<button class="btn rojo" id="fBorrar">Eliminar animal</button>' : ""}
+    <button class="btn gris" id="fCancelar">Cancelar</button>`);
+  $("fCancelar").onclick = cerrarModal;
+  $("fGuardar").onclick = () => {
+    const arete = $("fArete").value.trim();
+    if (!arete) return alert("El arete es obligatorio.");
+    const otro = buscarArete(arete);
+    if (otro && otro.id !== id) return alert("Ya existe un animal con ese arete.");
+    const datos = {
+      arete, nombre: $("fNombre").value.trim(), sexo: $("fSexo").value, raza: $("fRaza").value.trim(),
+      fechaNacMs: isoAms($("fNac").value), lote: $("fLote").value, madre: $("fMadre").value.trim(),
+      padre: $("fPadre").value.trim(), estado: $("fEstado").value, notas: $("fNotas").value.trim()
+    };
+    if (id) updateDoc(doc(db, "animales", id), datos).catch(errorGuardar);
+    else crearAnimal(datos);
+    cerrarModal();
+  };
+  if (id) $("fBorrar").onclick = () => {
+    if (!confirm("¿Eliminar este animal? Sus pesadas quedan guardadas en el historial.")) return;
+    deleteDoc(doc(db, "animales", id)).catch(errorGuardar);
+    cerrarModal(); ir("animales");
+  };
+}
+
+// ---------- Detalle del animal ----------
+let historialCache = { id: null, pesadas: [] };
+
+async function abrirDetalle(id) {
+  detalleId = id;
+  ir("detalle");
+  await renderDetalle(id, true);
+}
+$("btnVolver").onclick = () => { detalleId = null; ir("animales"); };
+
+async function renderDetalle(id, recargar) {
+  const a = animales.get(id);
+  if (!a) { $("detalle").innerHTML = '<div class="vacio">Animal no encontrado.</div>'; return; }
+  if (recargar || historialCache.id !== id) {
+    $("detalle").innerHTML = '<div class="vacio">Cargando...</div>';
+    try {
+      const s = await getDocs(query(collection(db, "pesadas"), where("animalId", "==", id)));
+      historialCache = { id, pesadas: s.docs.map(d => d.data()).sort((x, y) => x.fechaMs - y.fechaMs) };
+    } catch (e) { historialCache = { id, pesadas: [] }; console.error(e); }
+  }
+  const ps = historialCache.pesadas;
+  const edad = a.fechaNacMs ? Math.floor((Date.now() - a.fechaNacMs) / (30.44 * DIA)) : null;
+  const rp = a.sexo === "Hembra" ? estadoRepro(a.id) : null;
+  const eventos = repro.filter(e => e.animalId === a.id).sort((x, y) => y.fechaMs - x.fechaMs);
+  const crias = [...animales.values()].filter(c => c.madre && String(c.madre).toLowerCase() === String(a.arete).toLowerCase());
+
+  let filas = "";
+  for (let i = ps.length - 1; i >= 0; i--) {
+    const p = ps[i], ant = ps[i - 1];
+    const dif = ant ? p.peso - ant.peso : null;
+    const d = ant ? (p.fechaMs - ant.fechaMs) / DIA : null;
+    const g = ant && d >= 1 ? dif / d : null;
+    filas += `<tr><td>${fecha(p.fechaMs)}</td><td><b>${kg(p.peso)}</b></td><td>${dif == null ? "—" : (dif >= 0 ? "+" : "") + num(dif)}</td><td>${gdpTxt(g)}</td></tr>`;
+  }
+
+  $("detalle").innerHTML = `
+    <div class="card" style="margin-top:10px">
+      <div class="fila"><h2 style="margin:0">${esc(a.arete)} ${a.nombre ? "· " + esc(a.nombre) : ""}</h2><button class="btn peq" id="btnEditar">Editar</button></div>
+      <div class="sub" style="margin-top:6px">${esc(a.sexo || "—")} · ${esc(a.raza || "Raza —")} · ${edad != null ? edad + " meses" : "Edad —"} · <span class="chip ${a.estado === "activo" ? "ok" : "mal"}">${esc(a.estado)}</span></div>
+      <div class="sub">Lote: ${esc(nombreLote(a.lote))} · Potrero: ${esc(nombrePotrero(lotes.get(a.lote)?.potrero))}</div>
+      <div class="sub">Madre: ${esc(a.madre || "—")} · Padre: ${esc(a.padre || "—")}</div>
+      ${a.notas ? `<div class="sub">Notas: ${esc(a.notas)}</div>` : ""}
+      <div class="stats">
+        <div><b>${num(a.pesoActual)}</b><span>Peso actual</span></div>
+        <div><b>${num(a.pesoInicial)}</b><span>Peso inicial</span></div>
+        <div><b>${a.gdpTotal == null ? "—" : num(a.gdpTotal, 2)}</b><span>GDP total</span></div>
+        <div><b>${ps.length}</b><span>Pesadas</span></div>
+      </div>
+    </div>
+    <h3>Curva de peso</h3>
+    <div class="card">${grafica(ps)}</div>
+    <h3>Historial de pesos</h3>
+    ${ps.length ? `<table><tr><th>Fecha</th><th>Peso</th><th>Dif.</th><th>GDP</th></tr>${filas}</table>` : '<div class="vacio">Sin pesadas todavía.</div>'}
+    ${a.sexo === "Hembra" ? `
+      <div class="fila"><h3>Reproducción</h3><button class="btn verde peq" id="btnEvAnimal">+ Evento</button></div>
+      <div class="card"><b>Estado: ${esc(rp.estado)}</b>${rp.partoEst ? `<div class="sub">Parto estimado: ${fecha(rp.partoEst)}</div>` : ""}
+      <div class="sub">Crías registradas: ${crias.length ? crias.map(c => esc(c.arete)).join(", ") : "ninguna"}</div></div>
+      ${eventos.length ? "<table><tr><th>Fecha</th><th>Evento</th><th>Detalle</th></tr>" + eventos.map(e => `<tr><td>${fecha(e.fechaMs)}</td><td>${esc(TIPOS[e.tipo] || e.tipo)}</td><td>${esc(detalleEvento(e))}</td></tr>`).join("") + "</table>" : '<div class="vacio">Sin eventos reproductivos.</div>'}
+    ` : ""}`;
+  $("btnEditar").onclick = () => formAnimal(id);
+  if ($("btnEvAnimal")) $("btnEvAnimal").onclick = () => formEvento(a.arete);
+}
+
+function grafica(ps) {
+  if (ps.length < 2) return '<div class="vacio">Se necesitan al menos 2 pesadas para la curva.</div>';
+  const W = 600, H = 180, m = { l: 40, r: 10, t: 10, b: 24 };
+  const x0 = ps[0].fechaMs, x1 = ps[ps.length - 1].fechaMs || x0 + 1;
+  const ys = ps.map(p => p.peso), y0 = Math.min(...ys) * 0.95, y1 = Math.max(...ys) * 1.05;
+  const X = t => m.l + (W - m.l - m.r) * ((t - x0) / ((x1 - x0) || 1));
+  const Y = v => H - m.b - (H - m.t - m.b) * ((v - y0) / ((y1 - y0) || 1));
+  const pts = ps.map(p => `${X(p.fechaMs).toFixed(1)},${Y(p.peso).toFixed(1)}`).join(" ");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%">
+    <line x1="${m.l}" y1="${H - m.b}" x2="${W - m.r}" y2="${H - m.b}" stroke="#2d5a3f"/>
+    <text x="2" y="${Y(y1) + 10}">${num(y1)}</text><text x="2" y="${H - m.b}">${num(y0)}</text>
+    <text x="${m.l}" y="${H - 6}">${fecha(x0)}</text><text x="${W - m.r}" y="${H - 6}" text-anchor="end">${fecha(x1)}</text>
+    <polyline points="${pts}" fill="none" stroke="#39ff7a" stroke-width="2.5"/>
+    ${ps.map(p => `<circle cx="${X(p.fechaMs).toFixed(1)}" cy="${Y(p.peso).toFixed(1)}" r="3.5" fill="#39ff7a"/>`).join("")}
+  </svg>`;
+}
+
+// ======================================================================
+//  LOTES Y POTREROS
+// ======================================================================
+function renderLotes() {
+  const ls = [...lotes.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  $("listaLotes").innerHTML = ls.length ? ls.map(l => {
+    const an = [...animales.values()].filter(a => a.estado === "activo" && a.lote === l.id);
+    const conPeso = an.filter(a => a.pesoActual != null);
+    const prom = conPeso.length ? conPeso.reduce((s, a) => s + a.pesoActual, 0) / conPeso.length : null;
+    const conGdp = an.filter(a => a.gdpTotal != null);
+    const gdp = conGdp.length ? conGdp.reduce((s, a) => s + a.gdpTotal, 0) / conGdp.length : null;
+    const listos = l.pesoObjetivo ? an.filter(a => a.pesoActual >= l.pesoObjetivo).length : null;
+    const bajos = gdp != null ? conGdp.filter(a => a.gdpTotal < gdp * 0.7).length : 0;
+    return `<div class="card">
+      <div class="fila"><b>${esc(l.nombre)}</b><button class="btn gris peq" data-editlote="${l.id}">Editar</button></div>
+      <div class="sub">Potrero: ${esc(nombrePotrero(l.potrero))}${l.pesoObjetivo ? " · Peso objetivo: " + kg(l.pesoObjetivo) : ""}</div>
+      <div class="stats">
+        <div><b>${an.length}</b><span>Animales</span></div>
+        <div><b>${num(prom)}</b><span>Peso prom.</span></div>
+        <div><b>${gdp == null ? "—" : num(gdp, 2)}</b><span>GDP prom.</span></div>
+        <div><b>${listos == null ? "—" : listos}</b><span>Listos venta</span></div>
+      </div>
+      ${bajos ? `<div style="margin-top:8px"><span class="chip amar">⚠ ${bajos} animal(es) ganan menos del 70% del promedio</span></div>` : ""}
+      <button class="btn peq" style="margin-top:10px" data-verlote="${l.id}">Ver animales</button>
+    </div>`;
+  }).join("") : '<div class="vacio">Todavía no hay lotes.</div>';
+
+  const ps = [...potreros.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  $("listaPotreros").innerHTML = ps.length ? ps.map(p => {
+    const ls2 = [...lotes.values()].filter(l => l.potrero === p.id);
+    return `<div class="card"><div class="fila"><b>${esc(p.nombre)}</b><button class="btn gris peq" data-editpot="${p.id}">Editar</button></div>
+      <div class="sub">${p.hectareas ? num(p.hectareas, 1) + " ha · " : ""}Lotes: ${ls2.length ? ls2.map(l => esc(l.nombre)).join(", ") : "ninguno"}</div></div>`;
+  }).join("") : '<div class="vacio">Todavía no hay potreros.</div>';
+}
+
+$("v-lotes").onclick = e => {
+  const t = e.target;
+  if (t.dataset.editlote) formLote(t.dataset.editlote);
+  if (t.dataset.editpot) formPotrero(t.dataset.editpot);
+  if (t.dataset.verlote) { ir("animales"); $("filtroLote").value = t.dataset.verlote; $("filtroEstado").value = "activo"; renderAnimales(); }
+};
+$("btnNuevoLote").onclick = () => formLote(null);
+$("btnNuevoPotrero").onclick = () => formPotrero(null);
+
+function formLote(id) {
+  const l = id ? lotes.get(id) : {};
+  abrirModal(`<h2>${id ? "Editar lote" : "Nuevo lote"}</h2>
+    <label>Nombre *</label><input id="lNombre" value="${esc(l.nombre)}">
+    <label>Potrero</label><select id="lPotrero">${opcionesPotrero(l.potrero)}</select>
+    <label>Peso objetivo de venta (kg)</label><input id="lObjetivo" type="number" inputmode="decimal" value="${l.pesoObjetivo ?? ""}">
+    <button class="btn verde" id="lGuardar">Guardar</button>
+    ${id ? '<button class="btn rojo" id="lBorrar">Eliminar lote</button>' : ""}
+    <button class="btn gris" id="lCancelar">Cancelar</button>`);
+  $("lCancelar").onclick = cerrarModal;
+  $("lGuardar").onclick = () => {
+    const nombre = $("lNombre").value.trim();
+    if (!nombre) return alert("El nombre es obligatorio.");
+    const datos = { nombre, potrero: $("lPotrero").value, pesoObjetivo: $("lObjetivo").value ? Number($("lObjetivo").value) : null };
+    if (id) updateDoc(doc(db, "lotes", id), datos).catch(errorGuardar);
+    else setDoc(doc(collection(db, "lotes")), datos).catch(errorGuardar);
+    cerrarModal();
+  };
+  if (id) $("lBorrar").onclick = () => {
+    const n = [...animales.values()].filter(a => a.lote === id).length;
+    if (n) return alert(`No se puede eliminar: tiene ${n} animal(es). Muévelos a otro lote primero.`);
+    if (confirm("¿Eliminar este lote?")) { deleteDoc(doc(db, "lotes", id)).catch(errorGuardar); cerrarModal(); }
+  };
+}
+
+function formPotrero(id) {
+  const p = id ? potreros.get(id) : {};
+  abrirModal(`<h2>${id ? "Editar potrero" : "Nuevo potrero"}</h2>
+    <label>Nombre *</label><input id="pNombre" value="${esc(p.nombre)}">
+    <label>Hectáreas</label><input id="pHa" type="number" inputmode="decimal" value="${p.hectareas ?? ""}">
+    <button class="btn verde" id="pGuardar">Guardar</button>
+    ${id ? '<button class="btn rojo" id="pBorrar">Eliminar potrero</button>' : ""}
+    <button class="btn gris" id="pCancelar">Cancelar</button>`);
+  $("pCancelar").onclick = cerrarModal;
+  $("pGuardar").onclick = () => {
+    const nombre = $("pNombre").value.trim();
+    if (!nombre) return alert("El nombre es obligatorio.");
+    const datos = { nombre, hectareas: $("pHa").value ? Number($("pHa").value) : null };
+    if (id) updateDoc(doc(db, "potreros", id), datos).catch(errorGuardar);
+    else setDoc(doc(collection(db, "potreros")), datos).catch(errorGuardar);
+    cerrarModal();
+  };
+  if (id) $("pBorrar").onclick = () => {
+    if ([...lotes.values()].some(l => l.potrero === id)) return alert("No se puede eliminar: hay lotes asignados a este potrero.");
+    if (confirm("¿Eliminar este potrero?")) { deleteDoc(doc(db, "potreros", id)).catch(errorGuardar); cerrarModal(); }
+  };
+}
+
+// ======================================================================
+//  REPRODUCCIÓN
+// ======================================================================
+const TIPOS = { servicio: "Monta / servicio", inseminacion: "Inseminación", palpacion: "Palpación", parto: "Parto", aborto: "Aborto", destete: "Destete" };
+
+function detalleEvento(e) {
+  if (e.tipo === "servicio" || e.tipo === "inseminacion") return e.toro ? "Toro/semen: " + e.toro : "";
+  if (e.tipo === "palpacion") return e.resultado || "";
+  if (e.tipo === "parto") return e.cria ? `Cría ${e.cria}${e.criaSexo ? " (" + e.criaSexo + ")" : ""}` : "";
+  if (e.tipo === "destete") return e.cria ? "Cría " + e.cria : "";
+  return e.notas || "";
+}
+
+function estadoRepro(animalId) {
+  const ev = repro.filter(e => e.animalId === animalId).sort((a, b) => a.fechaMs - b.fechaMs);
+  let estado = "Sin registros", servicio = null;
+  for (const e of ev) {
+    if (e.tipo === "servicio" || e.tipo === "inseminacion") { servicio = e.fechaMs; estado = "Servida"; }
+    else if (e.tipo === "palpacion") { estado = e.resultado === "Preñada" ? "Preñada" : "Vacía"; if (estado === "Vacía") servicio = null; }
+    else if (e.tipo === "parto") { estado = "Parida"; servicio = null; }
+    else if (e.tipo === "aborto") { estado = "Vacía"; servicio = null; }
+  }
+  const partoEst = (estado === "Servida" || estado === "Preñada") && servicio ? servicio + GESTACION * DIA : null;
+  return { estado, partoEst };
+}
+
+function renderRepro() {
+  const hembras = [...animales.values()].filter(a => a.estado === "activo" && a.sexo === "Hembra");
+  const cuenta = { Preñada: 0, Servida: 0, Vacía: 0, Parida: 0 };
+  const partos = [];
+  hembras.forEach(h => {
+    const r = estadoRepro(h.id);
+    if (cuenta[r.estado] != null) cuenta[r.estado]++;
+    if (r.partoEst) partos.push({ h, r });
+  });
+  $("resumenRepro").innerHTML = Object.entries(cuenta).map(([k, v]) => `<div><b>${v}</b><span>${k}s</span></div>`).join("");
+
+  partos.sort((a, b) => a.r.partoEst - b.r.partoEst);
+  $("proxPartos").innerHTML = partos.length ? "<table><tr><th>Arete</th><th>Estado</th><th>Parto estimado</th><th>Faltan</th></tr>" +
+    partos.map(({ h, r }) => {
+      const d = Math.round((r.partoEst - Date.now()) / DIA);
+      return `<tr data-id="${h.id}"><td><b>${esc(h.arete)}</b></td><td>${r.estado}</td><td>${fecha(r.partoEst)}</td><td>${d < 0 ? `<span class="chip mal">${-d} días pasados</span>` : d <= 30 ? `<span class="chip amar">${d} días</span>` : d + " días"}</td></tr>`;
+    }).join("") + "</table>" : '<div class="vacio">No hay hembras servidas o preñadas.</div>';
+
+  const ult = [...repro].sort((a, b) => b.fechaMs - a.fechaMs).slice(0, 40);
+  $("ultEventos").innerHTML = ult.length ? "<table><tr><th>Fecha</th><th>Arete</th><th>Evento</th><th>Detalle</th></tr>" +
+    ult.map(e => `<tr data-id="${e.animalId}"><td>${fecha(e.fechaMs)}</td><td><b>${esc(e.arete)}</b></td><td>${esc(TIPOS[e.tipo] || e.tipo)}</td><td>${esc(detalleEvento(e))}</td></tr>`).join("") + "</table>"
+    : '<div class="vacio">Todavía no hay eventos.</div>';
+}
+$("v-repro").onclick = e => { const f = e.target.closest("tr[data-id]"); if (f && animales.has(f.dataset.id)) abrirDetalle(f.dataset.id); };
+$("btnNuevoEvento").onclick = () => formEvento("");
+
+function formEvento(arete) {
+  abrirModal(`<h2>Evento reproductivo</h2>
+    <label>Arete de la hembra *</label><input id="eArete" list="dlHembras" value="${esc(arete)}" autocomplete="off">
+    <div class="dos">
+      <div><label>Tipo</label><select id="eTipo">${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
+      <div><label>Fecha</label><input id="eFecha" type="date" value="${hoyISO()}"></div>
+    </div>
+    <div id="eCampos"></div>
+    <label>Notas</label><textarea id="eNotas" rows="2"></textarea>
+    <button class="btn verde" id="eGuardar">Guardar</button>
+    <button class="btn gris" id="eCancelar">Cancelar</button>`);
+  const campos = () => {
+    const t = $("eTipo").value;
+    $("eCampos").innerHTML =
+      (t === "servicio" || t === "inseminacion") ? `<label>${t === "servicio" ? "Toro" : "Semen / toro"}</label><input id="eToro">` :
+      t === "palpacion" ? `<label>Resultado</label><select id="eRes"><option>Preñada</option><option>Vacía</option></select>` :
+      t === "parto" ? `<div class="dos"><div><label>Arete de la cría</label><input id="eCria"></div>
+        <div><label>Sexo de la cría</label><select id="eCriaSexo"><option value="">—</option><option>Hembra</option><option>Macho</option></select></div></div>
+        <div class="sub" style="margin-top:6px">Si pones el arete, la cría se registra sola como animal nuevo.</div>` :
+      t === "destete" ? `<label>Arete de la cría destetada</label><input id="eCria" list="dlAretes">` : "";
+  };
+  $("eTipo").onchange = campos; campos();
+  $("eCancelar").onclick = cerrarModal;
+  $("eGuardar").onclick = () => {
+    const h = buscarArete($("eArete").value);
+    if (!h) return alert("No existe un animal con ese arete.");
+    if (h.sexo !== "Hembra") return alert("Ese animal no está registrado como Hembra. Edítalo primero.");
+    const t = $("eTipo").value, f = isoAms($("eFecha").value);
+    if (!f) return alert("Indica la fecha.");
+    const ev = { animalId: h.id, arete: h.arete, tipo: t, fechaMs: f, notas: $("eNotas").value.trim(), usuario, creadoMs: Date.now() };
+    if ($("eToro")) ev.toro = $("eToro").value.trim();
+    if ($("eRes")) ev.resultado = $("eRes").value;
+    if ($("eCria")) ev.cria = $("eCria").value.trim();
+    if ($("eCriaSexo")) ev.criaSexo = $("eCriaSexo").value;
+    if (t === "parto" && ev.cria) {
+      if (buscarArete(ev.cria)) return alert("Ya existe un animal con el arete de la cría.");
+      crearAnimal({ arete: ev.cria, sexo: ev.criaSexo || "", fechaNacMs: f, madre: h.arete, lote: h.lote || "", raza: h.raza || "" });
+    }
+    setDoc(doc(collection(db, "reproduccion")), ev).catch(errorGuardar);
+    cerrarModal();
+  };
+}
+</script>
+</body>
+</html>
