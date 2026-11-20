@@ -79,7 +79,7 @@
 
 <!-- ================= APP ================= -->
 <div id="app" class="oculto">
-<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.3</small></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
+<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.3.1</small></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
 <div id="bannerDemo" class="oculto" style="background:#7a6420;color:#fff;font-size:13px;padding:7px 14px;text-align:center">MODO DEMO · los datos se guardan solo en este teléfono</div>
 <main>
 
@@ -1892,18 +1892,7 @@ function prepararCarga() {
   const sel = $("cLote").value;
   $("cLote").innerHTML = opcionesLote(sel);
   $("cReproBox").classList.toggle("oculto", $("cSexo").value !== "Hembra");
-  if (!$("cArete").value) $("cArete").value = siguienteArete();
   pintarCargados();
-}
-
-function siguienteArete() {
-  const ult = cargados.length ? cargados[cargados.length - 1].arete : null;
-  if (ult && /^\d+$/.test(ult)) {
-    let n = parseInt(ult, 10) + 1;
-    while (buscarArete(String(n).padStart(ult.length, "0"))) n++;
-    return String(n).padStart(ult.length, "0");
-  }
-  return "";
 }
 
 // Crea el animal con su peso inicial y su estado reproductivo (para carga manual o importada)
@@ -1963,7 +1952,7 @@ $("cGuardar").onclick = () => {
   $("cMsg").innerHTML = `✔ <b>${esc(arete)}</b> guardado${peso ? " con " + kg(peso) : ""}`;
   ["cNombre", "cEdad", "cNac", "cMadre", "cCosto", "cNotas", "cPesoManual", "cMeses"].forEach(id => $(id).value = "");
   $("cRepro").value = ""; $("cMesesBox").classList.add("oculto");
-  $("cArete").value = siguienteArete();
+  $("cArete").value = "";   // el arete lo escribe siempre el responsable
   ultimas = []; estable = false;
   pintarCargados();
   $("cArete").focus();
