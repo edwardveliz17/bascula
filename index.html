@@ -86,7 +86,7 @@
 
 <!-- ================= APP ================= -->
 <div id="app" class="oculto">
-<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.5</small><br><span id="sync">☁️ Sincronizado</span></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
+<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.6</small><br><span id="sync">☁️ Sincronizado</span></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
 <div id="bannerDemo" class="oculto" style="background:#7a6420;color:#fff;font-size:13px;padding:7px 14px;text-align:center">MODO DEMO · los datos se guardan solo en este teléfono</div>
 <main>
 
@@ -108,7 +108,9 @@
     <select id="modo">
       <option value="ind">Individual</option>
       <option value="lote">Por lote (sesión)</option>
+      <option value="venta">Para venta (queda en espera)</option>
     </select>
+    <div id="avisoModoVenta" class="sub oculto" style="margin-top:6px">💵 Cada animal que peses queda <b style="color:#fff">en espera de venta</b>. Después lo agregas en Ventas → + Venta.</div>
 
     <div id="panelLote" class="card oculto" style="margin-top:10px">
       <div id="sesionInactiva">
@@ -135,6 +137,7 @@
     <div class="resultado" id="resultado"></div>
 
     <div id="listaSesion"></div>
+    <div id="panelEspera"></div>
   </section>
 
   <!-- ---------- ANIMALES ---------- -->
@@ -212,16 +215,20 @@
     </div>
 
     <div class="card">
-      <div class="fila"><b>2. Pesar y agregar animales</b><button class="btn peq" id="nvConectar">Conectar</button></div>
-      <div class="visor" style="margin-top:8px;padding:10px"><span class="peso" id="nvPeso" style="font-size:46px">----</span> <span class="unidad">kg</span>
-        <div class="estab" id="nvEstab">—</div></div>
-      <label>Arete del animal</label>
+      <b>2. Agregar animales</b>
+      <div class="sub" style="margin-top:4px">La báscula se usa en <b style="color:#fff">Pesar → modo "Para venta"</b>. Aquí solo se agregan.</div>
+
+      <h3 style="margin-top:12px">💵 Pesados en espera de venta</h3>
+      <div id="nvEspera"></div>
+
+      <h3>🔎 Buscar por arete</h3>
       <input id="nvArete" list="dlAretes" placeholder="Escribe o elige el arete" autocomplete="off">
       <div id="nvInfo" class="sub" style="margin-top:6px"></div>
-      <label class="chk" style="color:#e8f0ea;font-size:15px;margin-top:10px"><input type="checkbox" id="nvManual"> Escribir el peso a mano</label>
-      <div id="nvManualBox" class="oculto"><label>Peso (kg)</label><input id="nvPesoManual" type="number" inputmode="decimal"></div>
-      <button class="btn verde" id="nvAgregar" disabled>➕ Agregar a la venta</button>
-      <button class="btn gris" id="nvLista">📋 Agregar desde lista (con su último peso)</button>
+      <button class="btn" id="nvAgregar" disabled>➕ Agregar este animal</button>
+
+      <h3>📋 Agregar un lote completo</h3>
+      <select id="nvLoteSel"></select>
+      <button class="btn" id="nvAgregarLote">➕ Agregar todo el lote</button>
     </div>
 
     <div class="card">
@@ -352,6 +359,7 @@
   <!-- ---------- VENTAS ---------- -->
   <section class="vista" id="v-ventas">
     <div class="fila"><h2>Ventas</h2><button class="btn verde peq" id="btnNuevaVenta">+ Venta</button></div>
+    <div id="avisoEspera"></div>
     <div class="stats" id="resumenVentas"></div>
     <h3>Ventas registradas</h3>
     <div id="listaVentas"></div>
@@ -619,6 +627,8 @@ function refrescar() {
   const sl = $("sesLote").value; $("sesLote").innerHTML = opcionesLote(sl, false);
   mostrarInfoAnimal();
   if (sesion) renderSesion();
+  renderEspera();
+  avisoEsperaVentas();
   const v = document.querySelector(".vista.activa")?.id;
   if (v === "v-animales") renderAnimales();
   if (v === "v-lotes") renderLotes();
@@ -727,7 +737,7 @@ async function alDesconectar() {
   pesoActual = null; estable = false; ultimas = [];
   $("peso").textContent = "----"; $("estab").textContent = "—"; $("estab").classList.remove("si");
   $("cPeso").textContent = "----"; $("cEstab").textContent = "—"; $("cEstab").classList.remove("si");
-  $("nvPeso").textContent = "----"; $("nvEstab").textContent = "—"; $("nvEstab").classList.remove("si"); nvBoton();
+
   actualizarBotonGuardar();
   if (desconexionManual) {
     $("txtEstado").textContent = "Báscula desconectada";
@@ -755,10 +765,6 @@ function alRecibir(ev) {
   $("cPeso").textContent = num(p, 0);
   $("cEstab").textContent = estable ? "✔ ESTABLE" : "Moviéndose...";
   $("cEstab").classList.toggle("si", estable);
-  $("nvPeso").textContent = num(p, 0);
-  $("nvEstab").textContent = estable ? "✔ ESTABLE" : "Moviéndose...";
-  $("nvEstab").classList.toggle("si", estable);
-  nvBoton();
 }
 
 // ======================================================================
@@ -768,6 +774,8 @@ let sesion = null;   // { id, loteId, inicioMs, pesos: [] }
 
 $("modo").onchange = () => {
   const lote = $("modo").value === "lote";
+  $("avisoModoVenta").classList.toggle("oculto", $("modo").value !== "venta");
+  renderEspera();
   $("panelLote").classList.toggle("oculto", !lote);
   if (!lote && sesion && !confirm("Hay una sesión abierta. ¿Terminarla?")) { $("modo").value = "lote"; $("panelLote").classList.remove("oculto"); return; }
   if (!lote && sesion) terminarSesion();
@@ -844,6 +852,9 @@ $("btnGuardar").onclick = () => {
     a = crearAnimal({ arete, lote: sesion ? sesion.loteId : "" });
   }
   if (sesion && sesion.pesos.some(p => p.animalId === a.id) && !confirm("Este animal ya se pesó en esta sesión. ¿Guardar otra vez?")) return;
+  const paraVenta = $("modo").value === "venta";
+  if (paraVenta && a.estado !== "activo") return alert("Este animal no está activo (" + a.estado + ").");
+  if (paraVenta && retiroHasta(a.id) && !confirm(`⚠ ${a.arete} está en período de retiro hasta ${fecha(retiroHasta(a.id))}. ¿Dejarlo en espera de venta igual?`)) return;
 
   const ahora = Date.now();
   let dif = null, dias = null, gdp = null;
@@ -860,13 +871,13 @@ $("btnGuardar").onclick = () => {
   // Guardado sin esperar respuesta: si no hay señal, queda en el teléfono y sube después
   setDoc(doc(collection(db, "pesadas")), {
     animalId: a.id, arete: a.arete, peso, fechaMs: ahora, lote: a.lote || "",
-    sesionId: sesion ? sesion.id : null, gdp, usuario
+    sesionId: sesion ? sesion.id : null, gdp, usuario, ...(paraVenta ? { tipo: "preventa" } : {})
   }).catch(errorGuardar);
-  updateDoc(doc(db, "animales", a.id), {
-    pesoActual: peso, fechaUltPeso: ahora, pesoInicial: pIni, fechaPesoInicial: fIni,
-    gdpUltima: gdp ?? a.gdpUltima ?? null, gdpTotal
-  }).catch(errorGuardar);
-  Object.assign(a, { pesoActual: peso, fechaUltPeso: ahora, pesoInicial: pIni, fechaPesoInicial: fIni, gdpTotal });
+  const cambiosA = { pesoActual: peso, fechaUltPeso: ahora, pesoInicial: pIni, fechaPesoInicial: fIni, gdpUltima: gdp ?? a.gdpUltima ?? null, gdpTotal };
+  if (paraVenta) Object.assign(cambiosA, { enEsperaVenta: true, pesoEspera: peso, fechaEspera: ahora });
+  updateDoc(doc(db, "animales", a.id), cambiosA).catch(errorGuardar);
+  Object.assign(a, cambiosA);
+  if (paraVenta) renderEspera();
 
   if (sesion) { sesion.pesos.push({ animalId: a.id, arete: a.arete, peso, gdp }); renderSesion(); }
 
@@ -876,6 +887,7 @@ $("btnGuardar").onclick = () => {
   html += `<div class="sub">GDP: <b style="color:#fff">${gdpTxt(gdp)}</b> · GDP total: <b style="color:#fff">${gdpTxt(gdpTotal)}</b></div>`;
   if (gdp != null && gdp < 0) html += '<div style="margin-top:6px"><span class="chip mal">⚠ Bajó de peso</span></div>';
   if (dif == null) html += '<div class="sub">Primera pesada de este animal.</div>';
+  if (paraVenta) html += '<div style="margin-top:6px"><span class="chip ok">💵 En espera de venta</span></div>';
   $("resultado").innerHTML = html; $("resultado").style.display = "block";
 
   $("arete").value = ""; mostrarInfoAnimal();
@@ -2327,87 +2339,110 @@ function bajarArchivo(blob, nombre) {
 function prepararNuevaVenta() {
   if (!$("nvFecha").value) $("nvFecha").value = hoyISO();
   try { if (!$("nvFinca").value) $("nvFinca").value = localStorage.getItem("finca_nombre") || ""; } catch (_) {}
+  $("nvLoteSel").innerHTML = '<option value="">Elige un lote</option>' + opcionesLote("", false).replace('<option value="">Crea un lote primero</option>', "");
   nvPintar(); nvInfo();
 }
 $("nvVolver").onclick = () => {
   if (nvItems.length && !confirm("Hay animales agregados sin confirmar. ¿Salir y descartar?")) return;
   nvItems = []; ir("ventas");
 };
-$("nvConectar").onclick = () => $("btnCon").click();
-$("nvManual").onchange = () => { $("nvManualBox").classList.toggle("oculto", !$("nvManual").checked); nvBoton(); };
-$("nvPesoManual").oninput = nvBoton;
 $("nvArete").oninput = nvInfo;
 ["nvPrecio", "nvDesbaste"].forEach(id => $(id).oninput = nvPintar);
 
+const enEspera = () => [...animales.values()].filter(a => a.estado === "activo" && a.enEsperaVenta)
+  .sort((a, b) => (a.fechaEspera || 0) - (b.fechaEspera || 0));
+// Peso que se usa en la venta: el de la pesada "para venta"; si no hay, el último registrado
+const pesoParaVenta = a => a.enEsperaVenta && a.pesoEspera > 0 ? { peso: a.pesoEspera, fecha: a.fechaEspera, fuente: "espera" } : { peso: a.pesoActual, fecha: a.fechaUltPeso, fuente: "ultimo" };
+
+// ---------------- Lista "en espera" en la pantalla Pesar ----------------
+function renderEspera() {
+  const l = enEspera();
+  if ($("modo").value !== "venta" && !l.length) { $("panelEspera").innerHTML = ""; return; }
+  $("panelEspera").innerHTML = `<h3>💵 En espera de venta (${l.length})</h3>` + (l.length ? "<table><tr><th>Arete</th><th>Peso</th><th>Pesado</th><th></th></tr>" +
+    l.map(a => `<tr><td><b>${esc(a.arete)}</b>${retiroHasta(a.id) ? ' <span class="chip mal">retiro</span>' : ""}</td><td>${kg(a.pesoEspera)}</td><td>${new Date(a.fechaEspera).toLocaleString("es-VE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+      <td><button class="btn gris peq" data-sacar="${a.id}">Quitar</button></td></tr>`).join("") + "</table>" +
+    `<button class="btn verde" id="btnIrVenta">💵 Ir a la venta con estos ${l.length}</button>`
+    : '<div class="vacio">Pesa animales en modo "Para venta" y aparecerán aquí.</div>');
+  if ($("btnIrVenta")) $("btnIrVenta").onclick = () => { ir("nventa"); };
+}
+$("panelEspera").onclick = e => {
+  const id = e.target.dataset.sacar; if (!id) return;
+  const a = animales.get(id);
+  if (!confirm(`¿Quitar ${a.arete} de la espera de venta? (La pesada queda guardada en su historial)`)) return;
+  updateDoc(doc(db, "animales", id), { enEsperaVenta: false }).catch(errorGuardar);
+  a.enEsperaVenta = false; renderEspera(); avisoEsperaVentas();
+};
+function avisoEsperaVentas() {
+  const n = enEspera().length;
+  $("avisoEspera").innerHTML = n ? `<div class="card click" id="cardEspera" style="border-color:#2ecc71"><b>💵 ${n} animal${n > 1 ? "es" : ""} pesado${n > 1 ? "s" : ""} en espera de venta</b><div class="sub">Toca para hacer la venta</div></div>` : "";
+  if ($("cardEspera")) $("cardEspera").onclick = () => ir("nventa");
+}
+
+// ---------------- Agregar a la venta ----------------
+function nvAgregarAnimal(a, silencioso) {
+  if (!a || a.estado !== "activo" || nvItems.some(i => i.id === a.id)) return false;
+  const p = pesoParaVenta(a);
+  if (!(p.peso > 0)) { if (!silencioso) alert(`${a.arete} no tiene peso registrado. Pésalo en Pesar → modo "Para venta".`); return false; }
+  nvItems.push({ id: a.id, arete: a.arete, pesoBruto: p.peso, fuente: p.fuente, fechaPeso: p.fecha });
+  return true;
+}
+function nvPintarEspera() {
+  const l = enEspera().filter(a => !nvItems.some(i => i.id === a.id));
+  $("nvEspera").innerHTML = l.length ? l.map(a => `<label class="card chk" style="margin:0 0 6px;color:#e8f0ea;font-size:15px">
+      <input type="checkbox" data-esp="${a.id}" checked>
+      <span style="flex:1"><b>${esc(a.arete)}</b> · ${kg(a.pesoEspera)} <span class="sub">(${fecha(a.fechaEspera)})</span><br><span class="sub">${esc(nombreLote(a.lote))}</span>
+      ${retiroHasta(a.id) ? '<span class="chip mal">En retiro</span>' : ""}</span></label>`).join("") +
+    `<button class="btn verde" id="nvAgregarEspera">➕ Agregar marcados</button>`
+    : '<div class="vacio">No hay animales en espera. Pésalos en Pesar → modo "Para venta".</div>';
+  if ($("nvAgregarEspera")) $("nvAgregarEspera").onclick = () => {
+    const ids = [...$("nvEspera").querySelectorAll("input[data-esp]:checked")].map(x => x.dataset.esp);
+    const sel = ids.map(id => animales.get(id)).filter(Boolean);
+    const ret = sel.filter(a => retiroHasta(a.id));
+    if (ret.length && !confirm("⚠ En período de retiro: " + ret.map(a => a.arete).join(", ") + ". ¿Agregarlos de todas formas?")) return;
+    sel.forEach(a => nvAgregarAnimal(a, true));
+    nvPintar(); nvInfo();
+  };
+}
+
 function nvInfo() {
   const t = $("nvArete").value.trim(), a = buscarArete(t);
+  let ok = false;
   if (!t) $("nvInfo").innerHTML = "";
   else if (!a) $("nvInfo").innerHTML = '<span class="chip mal">Arete no registrado</span>';
   else if (a.estado !== "activo") $("nvInfo").innerHTML = `<span class="chip mal">Este animal está ${esc(a.estado)}</span>`;
+  else if (nvItems.some(i => i.id === a.id)) $("nvInfo").innerHTML = '<span class="chip amar">Ya está en esta venta</span>';
   else {
-    const ret = retiroHasta(a.id), obj = lotes.get(a.lote)?.pesoObjetivo;
-    $("nvInfo").innerHTML = `<b>${esc(a.nombre || a.arete)}</b> · ${esc(a.sexo || "")} · ${esc(nombreLote(a.lote))}<br>Último peso: ${kg(a.pesoActual)} (${fecha(a.fechaUltPeso)}) · GDP: ${gdpTxt(a.gdpTotal)}` +
-      (ret ? `<br><span class="chip mal">⚠ En retiro hasta ${fecha(ret)}</span>` : "") + (obj && a.pesoActual >= obj ? ' <span class="chip ok">Listo para venta</span>' : "") +
-      (nvItems.some(i => i.id === a.id) ? '<br><span class="chip amar">Ya está en esta venta</span>' : "");
+    const p = pesoParaVenta(a), ret = retiroHasta(a.id), dias = p.fecha ? Math.floor((Date.now() - p.fecha) / DIA) : null;
+    $("nvInfo").innerHTML = `<b>${esc(a.nombre || a.arete)}</b> · ${esc(a.sexo || "")} · ${esc(nombreLote(a.lote))}<br>` +
+      (p.peso > 0 ? `Peso para la venta: <b style="color:#fff">${kg(p.peso)}</b> (${p.fuente === "espera" ? "💵 pesado para venta" : "último peso"} del ${fecha(p.fecha)})` : '<span class="chip mal">Sin peso registrado</span>') +
+      (p.fuente === "ultimo" && dias > 7 ? `<br><span class="chip amar">⚠ Ese peso tiene ${dias} días: conviene pesarlo de nuevo</span>` : "") +
+      (ret ? `<br><span class="chip mal">⚠ En retiro hasta ${fecha(ret)}</span>` : "");
+    ok = p.peso > 0;
   }
-  nvBoton();
-}
-function nvBoton() {
-  const a = buscarArete($("nvArete").value);
-  const pesoOk = $("nvManual").checked ? Number($("nvPesoManual").value) > 0 : (estable && pesoActual > 0);
-  $("nvAgregar").disabled = !(a && a.estado === "activo" && !nvItems.some(i => i.id === a.id) && pesoOk);
+  $("nvAgregar").disabled = !ok;
 }
 
 $("nvAgregar").onclick = () => {
   const a = buscarArete($("nvArete").value);
   if (!a) return;
   if (retiroHasta(a.id) && !confirm(`⚠ ${a.arete} está en período de retiro hasta ${fecha(retiroHasta(a.id))}. ¿Agregarlo de todas formas?`)) return;
-  const manual = $("nvManual").checked;
-  nvItems.push({ id: a.id, arete: a.arete, pesoBruto: manual ? Number($("nvPesoManual").value) : pesoActual, fuente: manual ? "manual" : "bascula" });
-  $("nvArete").value = ""; $("nvPesoManual").value = "";
-  ultimas = []; estable = false;
-  nvInfo(); nvPintar();
-  $("nvArete").focus();
+  if (nvAgregarAnimal(a)) { $("nvArete").value = ""; nvInfo(); nvPintar(); }
 };
 
-$("nvLista").onclick = () => {
-  abrirModal(`<h2>Agregar desde lista</h2>
-    <div class="sub">Se usa el último peso registrado de cada animal.</div>
-    <label>Lote</label><select id="nlLote"><option value="">Todos los lotes</option>${opcionesLote("", false)}</select>
-    <button class="btn peq" style="margin-top:8px" id="nlListos">Marcar los listos para venta</button>
-    <div id="nlLista" style="margin-top:8px;max-height:50vh;overflow-y:auto"></div>
-    <button class="btn verde" id="nlOk">Agregar marcados</button>
-    <button class="btn gris" id="nlCancelar">Cancelar</button>`);
-  const marcados = new Set();
-  const pintar = () => {
-    const fl = $("nlLote").value;
-    const an = [...animales.values()].filter(a => a.estado === "activo" && (!fl || a.lote === fl) && !nvItems.some(i => i.id === a.id))
-      .sort((a, b) => String(a.arete).localeCompare(String(b.arete), "es", { numeric: true }));
-    $("nlLista").innerHTML = an.length ? an.map(a => {
-      const obj = lotes.get(a.lote)?.pesoObjetivo, ret = retiroHasta(a.id);
-      return `<label class="card chk" style="margin:0 0 6px;color:#e8f0ea;font-size:15px">
-        <input type="checkbox" data-id="${a.id}" ${marcados.has(a.id) ? "checked" : ""} ${a.pesoActual > 0 ? "" : "disabled"}>
-        <span style="flex:1"><b>${esc(a.arete)}</b> · ${a.pesoActual > 0 ? kg(a.pesoActual) + " (" + fecha(a.fechaUltPeso) + ")" : "sin peso"}<br><span class="sub">${esc(nombreLote(a.lote))}</span>
-        ${obj && a.pesoActual >= obj ? '<span class="chip ok">Listo</span>' : ""} ${ret ? '<span class="chip mal">En retiro</span>' : ""}</span></label>`;
-    }).join("") : '<div class="vacio">No hay animales disponibles.</div>';
-  };
-  $("nlLista").onchange = e => { const id = e.target.dataset.id; if (id) e.target.checked ? marcados.add(id) : marcados.delete(id); };
-  $("nlLote").onchange = pintar;
-  $("nlListos").onclick = () => {
-    const fl = $("nlLote").value;
-    [...animales.values()].filter(a => a.estado === "activo" && (!fl || a.lote === fl) && lotes.get(a.lote)?.pesoObjetivo && a.pesoActual >= lotes.get(a.lote).pesoObjetivo && !retiroHasta(a.id) && !nvItems.some(i => i.id === a.id))
-      .forEach(a => marcados.add(a.id));
-    pintar();
-  };
-  $("nlCancelar").onclick = cerrarModal;
-  $("nlOk").onclick = () => {
-    const sel = [...marcados].map(id => animales.get(id)).filter(a => a && a.pesoActual > 0);
-    const ret = sel.filter(a => retiroHasta(a.id));
-    if (ret.length && !confirm("⚠ En período de retiro: " + ret.map(a => a.arete).join(", ") + ". ¿Agregarlos de todas formas?")) return;
-    sel.forEach(a => nvItems.push({ id: a.id, arete: a.arete, pesoBruto: a.pesoActual, fuente: "ultimo" }));
-    cerrarModal(); nvPintar(); nvInfo();
-  };
-  pintar();
+$("nvAgregarLote").onclick = () => {
+  const loteId = $("nvLoteSel").value;
+  if (!loteId) return alert("Elige un lote.");
+  const an = [...animales.values()].filter(a => a.estado === "activo" && a.lote === loteId && !nvItems.some(i => i.id === a.id));
+  if (!an.length) return alert("Ese lote no tiene animales activos disponibles.");
+  const sinPeso = an.filter(a => !(pesoParaVenta(a).peso > 0)), ret = an.filter(a => retiroHasta(a.id));
+  const viejos = an.filter(a => pesoParaVenta(a).fuente === "ultimo" && a.fechaUltPeso && Date.now() - a.fechaUltPeso > 7 * DIA);
+  let msg = `Agregar ${an.length - sinPeso.length} animales del lote ${nombreLote(loteId)}.`;
+  if (sinPeso.length) msg += `\n\nSin peso (no se agregan): ${sinPeso.map(a => a.arete).join(", ")}`;
+  if (viejos.length) msg += `\n\n⚠ Con peso de hace más de 7 días: ${viejos.map(a => a.arete).join(", ")}`;
+  if (ret.length) msg += `\n\n⚠ En período de retiro: ${ret.map(a => a.arete).join(", ")}`;
+  if (!confirm(msg + "\n\n¿Continuar?")) return;
+  an.forEach(a => nvAgregarAnimal(a, true));
+  nvPintar(); nvInfo();
 };
 
 function nvCalculo() {
@@ -2417,12 +2452,13 @@ function nvCalculo() {
 }
 function nvPintar() {
   const c = nvCalculo();
-  const fuente = { bascula: "⚖️", manual: "✍️", ultimo: "📋" };
+  nvPintarEspera();
+  const fuente = { espera: "💵", ultimo: "📋" };
   $("nvItems").innerHTML = c.lineas.length ? "<table><tr><th>Arete</th><th>Bruto</th><th>Neto</th><th>Monto</th><th></th></tr>" +
     c.lineas.map((l, k) => `<tr><td><b>${esc(l.arete)}</b> ${fuente[l.fuente]}</td><td>${kg(l.pesoBruto)}</td><td>${kg(l.neto)}</td><td>${dinero(l.monto)}</td>
       <td><button class="btn rojo peq" data-quitar="${k}">✕</button></td></tr>`).join("") + "</table>" +
-    '<div class="sub" style="margin-top:6px">⚖️ pesado ahora · ✍️ peso manual · 📋 último peso</div>'
-    : '<div class="vacio">Pesa un animal y tócalo en "Agregar a la venta".</div>';
+    '<div class="sub" style="margin-top:6px">💵 pesado para venta · 📋 último peso registrado</div>'
+    : '<div class="vacio">Todavía no hay animales en esta venta.</div>';
   $("nvTotales").innerHTML = `<div><b>${c.lineas.length}</b><span>Animales</span></div><div><b>${num(c.bruto)}</b><span>Kg brutos</span></div>
     <div><b>${num(c.neto)}</b><span>Kg netos</span></div><div><b style="color:#39ff7a">${dinero(c.total)}</b><span>Total</span></div>`;
 }
@@ -2457,22 +2493,14 @@ $("nvConfirmar").onclick = async () => {
     const ticket = `V-${ymd}-${ref.id.slice(-4).toUpperCase()}`;
     const lineas = g.map(l => {
       const a = animales.get(l.id);
-      let gdp = null;
-      if (l.fuente !== "ultimo" && a.pesoActual != null && a.fechaUltPeso) { const d = (fechaMs - a.fechaUltPeso) / DIA; if (d >= 1) gdp = (l.pesoBruto - a.pesoActual) / d; }
-      return { id: l.id, arete: l.arete, pesoBruto: l.pesoBruto, peso: l.neto, monto: l.monto, lote: a.lote || "", fuente: l.fuente, gdp };
+      return { id: l.id, arete: l.arete, pesoBruto: l.pesoBruto, peso: l.neto, monto: l.monto, lote: a.lote || "", fuente: l.fuente, fechaPeso: l.fechaPeso || null, gdp: a.gdpUltima ?? null };
     });
     const venta = { ...base, ticket, animales: lineas, pesoBruto: lineas.reduce((t, l) => t + l.pesoBruto, 0), pesoTotal: lineas.reduce((t, l) => t + l.peso, 0), total: lineas.reduce((t, l) => t + l.monto, 0) };
     setDoc(ref, venta).catch(errorGuardar);
     creadas.push({ id: ref.id, ...venta });
 
     for (const l of lineas) {
-      const a = animales.get(l.id), cambios = { estado: "vendido", fechaBajaMs: fechaMs, ventaId: ref.id, precioVentaKg: c.precio, ticketVenta: ticket };
-      if (l.fuente !== "ultimo") {
-        // Pesada de salida: queda en el historial del animal
-        setDoc(doc(collection(db, "pesadas")), { animalId: a.id, arete: a.arete, peso: l.pesoBruto, fechaMs, lote: a.lote || "", sesionId: null, gdp: l.gdp, usuario, tipo: "venta", ventaId: ref.id }).catch(errorGuardar);
-        const pIni = a.pesoInicial ?? l.pesoBruto, fIni = a.fechaPesoInicial ?? fechaMs, dT = (fechaMs - fIni) / DIA;
-        Object.assign(cambios, { pesoActual: l.pesoBruto, fechaUltPeso: fechaMs, pesoInicial: pIni, fechaPesoInicial: fIni, gdpUltima: l.gdp ?? a.gdpUltima ?? null, gdpTotal: dT >= 1 ? (l.pesoBruto - pIni) / dT : (a.gdpTotal ?? null) });
-      }
+      const a = animales.get(l.id), cambios = { estado: "vendido", fechaBajaMs: fechaMs, ventaId: ref.id, precioVentaKg: c.precio, ticketVenta: ticket, enEsperaVenta: false };
       updateDoc(doc(db, "animales", a.id), cambios).catch(errorGuardar);
       Object.assign(a, cambios);
     }
@@ -2665,7 +2693,7 @@ async function hojaBitacora(libro, a, venta, usados) {
   if (a.creadoMs) ev.push([a.creadoMs, "Registro", "Alta en la app", [a.origen, a.cargaInicial ? "carga inicial" : "", a.costoCompra ? "costo " + dinero(a.costoCompra) : ""].filter(Boolean).join(" · "), null, null, null]);
   ps.forEach((p, k) => {
     const ant = ps[k - 1], dif = ant ? p.peso - ant.peso : null, d = ant ? (p.fechaMs - ant.fechaMs) / DIA : null;
-    const tipo = p.tipo === "venta" ? "Pesaje de venta" : p.cargaInicial ? "Pesaje inicial" : p.sesionId ? "Pesaje en lote" : "Pesaje individual";
+    const tipo = p.tipo === "venta" || p.tipo === "preventa" ? "Pesaje para venta" : p.cargaInicial ? "Pesaje inicial" : p.sesionId ? "Pesaje en lote" : "Pesaje individual";
     ev.push([p.fechaMs, "Pesaje", tipo, p.lote ? "Lote: " + nombreLote(p.lote) : "", p.peso, dif, d >= 1 ? dif / d : null]);
   });
   sanA.forEach(s => ev.push([s.fechaMs, "Sanidad", (TIPOS_SAN[s.tipo] || s.tipo) + ": " + s.producto,
@@ -2681,7 +2709,7 @@ async function hojaBitacora(libro, a, venta, usados) {
   const colores = { Pesaje: "FFFFFF", Sanidad: "FDE9E7", "Reproducción": "F1E6F7", Venta: PAL.verde, Baja: "E7E6E6", Nacimiento: "FFF6D6", Registro: "E3F1E7" };
   ev.forEach(e => {
     r++;
-    const fillC = e[2] === "Pesaje de venta" ? "DDEBF7" : colores[e[1]] || "FFFFFF";
+    const fillC = e[2] === "Pesaje para venta" ? "DDEBF7" : colores[e[1]] || "FFFFFF";
     e.forEach((x, i) => h.set(r, i, i === 0 ? aFecha(x) : x ?? "", E.get({ fill: fillC, borde: 1, fmt: FMT[tipos[i]], h: tipos[i] === "txt" ? "left" : "right", wrap: i === 3 ? 1 : 0, b: i === 1 || i === 4 ? 1 : 0 })));
   });
   if (r >= ini) h.barra(ini, r, 4, "63BE7B");
