@@ -86,7 +86,7 @@
 
 <!-- ================= APP ================= -->
 <div id="app" class="oculto">
-<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.4</small><br><span id="sync">☁️ Sincronizado</span></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
+<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.5</small><br><span id="sync">☁️ Sincronizado</span></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
 <div id="bannerDemo" class="oculto" style="background:#7a6420;color:#fff;font-size:13px;padding:7px 14px;text-align:center">MODO DEMO · los datos se guardan solo en este teléfono</div>
 <main>
 
@@ -178,7 +178,63 @@
     <div id="ultEventos"></div>
   </section>
 
-<!-- ---------- CARGA INICIAL ---------- -->
+<!-- ---------- NUEVA VENTA ---------- -->
+  <section class="vista" id="v-nventa">
+    <button class="btn gris peq" id="nvVolver">← Volver a Ventas</button>
+    <h2 style="margin-top:12px">💵 Nueva venta</h2>
+
+    <div class="card">
+      <b>1. Datos de la venta</b>
+      <label>Tipo de venta</label>
+      <select id="nvModo">
+        <option value="individual">Un ticket por cada animal</option>
+        <option value="lote">Un solo ticket para todos (lote)</option>
+      </select>
+      <div class="dos">
+        <div><label>Fecha</label><input id="nvFecha" type="date"></div>
+        <div><label>Precio por kg ($) *</label><input id="nvPrecio" type="number" inputmode="decimal"></div>
+      </div>
+      <div class="dos">
+        <div><label>Desbaste (%)</label><input id="nvDesbaste" type="number" inputmode="decimal" placeholder="0"></div>
+        <div><label>Nombre de la finca</label><input id="nvFinca"></div>
+      </div>
+      <label>Comprador *</label><input id="nvComprador">
+      <div class="dos">
+        <div><label>Cédula / RIF</label><input id="nvDoc"></div>
+        <div><label>Teléfono</label><input id="nvTel" type="tel"></div>
+      </div>
+      <div class="dos">
+        <div><label>Destino</label><input id="nvDestino"></div>
+        <div><label>Placa del vehículo</label><input id="nvPlaca"></div>
+      </div>
+      <label>N° de guía de movilización</label><input id="nvGuia">
+      <label>Observaciones</label><textarea id="nvNotas" rows="2"></textarea>
+    </div>
+
+    <div class="card">
+      <div class="fila"><b>2. Pesar y agregar animales</b><button class="btn peq" id="nvConectar">Conectar</button></div>
+      <div class="visor" style="margin-top:8px;padding:10px"><span class="peso" id="nvPeso" style="font-size:46px">----</span> <span class="unidad">kg</span>
+        <div class="estab" id="nvEstab">—</div></div>
+      <label>Arete del animal</label>
+      <input id="nvArete" list="dlAretes" placeholder="Escribe o elige el arete" autocomplete="off">
+      <div id="nvInfo" class="sub" style="margin-top:6px"></div>
+      <label class="chk" style="color:#e8f0ea;font-size:15px;margin-top:10px"><input type="checkbox" id="nvManual"> Escribir el peso a mano</label>
+      <div id="nvManualBox" class="oculto"><label>Peso (kg)</label><input id="nvPesoManual" type="number" inputmode="decimal"></div>
+      <button class="btn verde" id="nvAgregar" disabled>➕ Agregar a la venta</button>
+      <button class="btn gris" id="nvLista">📋 Agregar desde lista (con su último peso)</button>
+    </div>
+
+    <div class="card">
+      <b>3. Animales en esta venta</b>
+      <div id="nvItems" style="margin-top:8px"></div>
+      <div class="stats" id="nvTotales" style="margin-top:10px"></div>
+    </div>
+    <button class="btn verde" id="nvConfirmar">✔ Confirmar venta y generar ticket</button>
+
+    <div id="nvResultado" class="resultado" style="margin-top:12px"></div>
+  </section>
+
+  <!-- ---------- CARGA INICIAL ---------- -->
   <section class="vista" id="v-carga">
     <button class="btn gris peq" id="btnVolverCarga">← Volver a Animales</button>
     <h2 style="margin-top:12px">📥 Carga inicial del rebaño</h2>
@@ -589,7 +645,7 @@ let detalleId = null;
 function ir(v) {
   document.querySelectorAll(".vista").forEach(s => s.classList.remove("activa"));
   $("v-" + v).classList.add("activa");
-  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("activo", b.dataset.v === v || ((v === "detalle" || v === "carga") && b.dataset.v === "animales")));
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("activo", b.dataset.v === v || ((v === "detalle" || v === "carga") && b.dataset.v === "animales") || (v === "nventa" && b.dataset.v === "ventas")));
   if (v === "animales") renderAnimales();
   if (v === "lotes") renderLotes();
   if (v === "repro") renderRepro();
@@ -597,6 +653,7 @@ function ir(v) {
   if (v === "ventas") renderVentas();
   if (v === "reportes") prepararReportes();
   if (v === "carga") prepararCarga();
+  if (v === "nventa") prepararNuevaVenta();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => ir(b.dataset.v));
@@ -670,6 +727,7 @@ async function alDesconectar() {
   pesoActual = null; estable = false; ultimas = [];
   $("peso").textContent = "----"; $("estab").textContent = "—"; $("estab").classList.remove("si");
   $("cPeso").textContent = "----"; $("cEstab").textContent = "—"; $("cEstab").classList.remove("si");
+  $("nvPeso").textContent = "----"; $("nvEstab").textContent = "—"; $("nvEstab").classList.remove("si"); nvBoton();
   actualizarBotonGuardar();
   if (desconexionManual) {
     $("txtEstado").textContent = "Báscula desconectada";
@@ -697,6 +755,10 @@ function alRecibir(ev) {
   $("cPeso").textContent = num(p, 0);
   $("cEstab").textContent = estable ? "✔ ESTABLE" : "Moviéndose...";
   $("cEstab").classList.toggle("si", estable);
+  $("nvPeso").textContent = num(p, 0);
+  $("nvEstab").textContent = estable ? "✔ ESTABLE" : "Moviéndose...";
+  $("nvEstab").classList.toggle("si", estable);
+  nvBoton();
 }
 
 // ======================================================================
@@ -976,8 +1038,18 @@ async function renderDetalle(id, recargar) {
     ` : ""}
     <div class="fila"><h3>Sanidad</h3><button class="btn verde peq" id="btnSanAnimal">+ Registro</button></div>
     ${tablaSanidad(sanidad.filter(r => (r.animales || []).includes(a.id)).sort((x, y) => y.fechaMs - x.fechaMs), false)}
+    <button class="btn" id="btnBitacora">📄 Bitácora en Excel</button>
     ${a.estado === "activo" ? '<button class="btn rojo" id="btnMuerte">Registrar muerte</button>' : ""}`;
   $("btnEditar").onclick = () => formAnimal(id);
+  $("btnBitacora").onclick = async () => {
+    $("btnBitacora").disabled = true;
+    try {
+      const libro = new XL.Libro();
+      await hojaBitacora(libro, a, ventas.find(v => v.id === a.ventaId) || null, new Set());
+      bajarArchivo(libro.blob(), `Bitacora_${String(a.arete).replace(/[^\w-]+/g, "_")}_${hoyISO()}.xlsx`);
+    } catch (e) { alert("No se pudo generar: " + e.message); }
+    $("btnBitacora").disabled = false;
+  };
   $("btnSanAnimal").onclick = () => formSanidad(a.arete);
   if ($("btnMuerte")) $("btnMuerte").onclick = () => formMuerte(id);
   if ($("btnEvAnimal")) $("btnEvAnimal").onclick = () => formEvento(a.arete);
@@ -1321,7 +1393,7 @@ function renderVentas() {
 
   const ls = [...ventas].sort((a, b) => b.fechaMs - a.fechaMs);
   $("listaVentas").innerHTML = ls.length ? ls.map(v => `<div class="card click" data-venta="${v.id}">
-      <div class="fila"><b>${fecha(v.fechaMs)} · ${esc(v.comprador || "Sin comprador")}</b><b class="total" style="font-size:17px">${dinero(v.total)}</b></div>
+      <div class="fila"><b>${v.ticket ? esc(v.ticket) + "<br>" : ""}${fecha(v.fechaMs)} · ${esc(v.comprador || "Sin comprador")}</b><b class="total" style="font-size:17px">${dinero(v.total)}</b></div>
       <div class="sub">${(v.animales || []).length} animales · ${kg(v.pesoTotal)} · ${dinero(v.precioKg)}/kg · prom. ${kg(v.pesoTotal / ((v.animales || []).length || 1))}</div>
     </div>`).join("") : '<div class="vacio">Todavía no hay ventas.</div>';
 
@@ -1334,7 +1406,7 @@ $("v-ventas").onclick = e => {
   const c = e.target.closest("[data-venta]"); if (c) return verVenta(c.dataset.venta);
   const f = e.target.closest("tr[data-id]"); if (f && animales.has(f.dataset.id)) abrirDetalle(f.dataset.id);
 };
-$("btnNuevaVenta").onclick = () => formVenta();
+$("btnNuevaVenta").onclick = () => ir("nventa");
 
 function formVenta() {
   abrirModal(`<h2>Nueva venta</h2>
@@ -1409,19 +1481,28 @@ function formVenta() {
 function verVenta(id) {
   const v = ventas.find(x => x.id === id);
   if (!v) return;
-  abrirModal(`<h2>Venta del ${fecha(v.fechaMs)}</h2>
-    <div class="sub">Comprador: ${esc(v.comprador || "—")} · ${dinero(v.precioKg)}/kg</div>
+  const n = (v.animales || []).length || 1;
+  abrirModal(`<h2>${v.ticket ? esc(v.ticket) : "Venta"}</h2>
+    <div class="sub">${new Date(v.fechaMs).toLocaleString("es-VE")} · ${dinero(v.precioKg)}/kg${v.desbaste ? " · Desbaste " + num(v.desbaste, 1) + "%" : ""}</div>
+    <div class="sub">Comprador: <b style="color:#fff">${esc(v.comprador || "—")}</b>${v.documento ? " · " + esc(v.documento) : ""}${v.telefono ? " · " + esc(v.telefono) : ""}</div>
+    ${v.destino || v.placa || v.guia ? `<div class="sub">${v.destino ? "Destino: " + esc(v.destino) + " · " : ""}${v.placa ? "Placa: " + esc(v.placa) + " · " : ""}${v.guia ? "Guía: " + esc(v.guia) : ""}</div>` : ""}
     ${v.notas ? `<div class="sub">Notas: ${esc(v.notas)}</div>` : ""}
-    <div class="stats"><div><b>${(v.animales || []).length}</b><span>Animales</span></div><div><b>${num(v.pesoTotal)}</b><span>Kg</span></div>
-      <div><b>${num(v.pesoTotal / ((v.animales || []).length || 1))}</b><span>Prom. kg</span></div><div><b>${dinero(v.total)}</b><span>Total</span></div></div>
-    <table style="margin-top:10px"><tr><th>Arete</th><th>Peso</th><th>Monto</th></tr>
-      ${(v.animales || []).map(a => `<tr><td>${esc(a.arete)}</td><td>${kg(a.peso)}</td><td>${dinero(a.peso * v.precioKg)}</td></tr>`).join("")}</table>
+    <div class="stats"><div><b>${(v.animales || []).length}</b><span>Animales</span></div><div><b>${num(v.pesoTotal)}</b><span>Kg netos</span></div>
+      <div><b>${num(v.pesoTotal / n)}</b><span>Prom. kg</span></div><div><b>${dinero(v.total)}</b><span>Total</span></div></div>
+    <table style="margin-top:10px"><tr><th>Arete</th><th>Bruto</th><th>Neto</th><th>Monto</th></tr>
+      ${(v.animales || []).map(a => `<tr><td><b>${esc(a.arete)}</b></td><td>${kg(a.pesoBruto ?? a.peso)}</td><td>${kg(a.peso)}</td><td>${dinero(a.monto ?? a.peso * v.precioKg)}</td></tr>`).join("")}</table>
+    <button class="btn verde" id="vTicket">📄 Ticket y bitácora en Excel</button>
     <button class="btn rojo" id="vAnular">Anular venta</button>
     <button class="btn gris" id="vCerrar">Cerrar</button>`);
   $("vCerrar").onclick = cerrarModal;
+  $("vTicket").onclick = async () => {
+    $("vTicket").disabled = true; $("vTicket").textContent = "Generando...";
+    try { await descargarTickets([v]); } catch (e) { alert("No se pudo generar: " + e.message); }
+    $("vTicket").disabled = false; $("vTicket").textContent = "📄 Ticket y bitácora en Excel";
+  };
   $("vAnular").onclick = () => {
     if (!confirm("¿Anular esta venta? Los animales vuelven a quedar activos.")) return;
-    (v.animales || []).forEach(a => { if (animales.has(a.id)) updateDoc(doc(db, "animales", a.id), { estado: "activo", fechaBajaMs: null, ventaId: null, precioVentaKg: null }).catch(errorGuardar); });
+    (v.animales || []).forEach(a => { if (animales.has(a.id)) updateDoc(doc(db, "animales", a.id), { estado: "activo", fechaBajaMs: null, ventaId: null, precioVentaKg: null, ticketVenta: null }).catch(errorGuardar); });
     deleteDoc(doc(db, "ventas", v.id)).catch(errorGuardar);
     cerrarModal();
   };
@@ -1494,7 +1575,7 @@ const XL = (() => {
       const font = this.idx(this.fonts, `<font>${o.b ? "<b/>" : ""}${o.i ? "<i/>" : ""}<sz val="${o.sz || 11}"/><color rgb="FF${o.color || "1F2D24"}"/><name val="Calibri"/></font>`);
       const fill = o.fill ? this.idx(this.fills, `<fill><patternFill patternType="solid"><fgColor rgb="FF${o.fill}"/><bgColor indexed="64"/></patternFill></fill>`) : 0;
       const bc = "FFCFDAD3";
-      const border = o.borde ? this.idx(this.borders, `<border><left style="thin"><color rgb="${bc}"/></left><right style="thin"><color rgb="${bc}"/></right><top style="thin"><color rgb="${bc}"/></top><bottom style="thin"><color rgb="${bc}"/></bottom><diagonal/></border>`) : 0;
+      const border = o.linea ? this.idx(this.borders, `<border><left/><right/><top/><bottom style="medium"><color rgb="FF1F2D24"/></bottom><diagonal/></border>`) : o.borde ? this.idx(this.borders, `<border><left style="thin"><color rgb="${bc}"/></left><right style="thin"><color rgb="${bc}"/></right><top style="thin"><color rgb="${bc}"/></top><bottom style="thin"><color rgb="${bc}"/></bottom><diagonal/></border>`) : 0;
       let fmt = 0;
       if (o.fmt) {
         if (!(o.fmt in this.fmtIds)) { const id = 164 + this.numFmts.length; this.numFmts.push(`<numFmt numFmtId="${id}" formatCode="${x(o.fmt)}"/>`); this.fmtIds[o.fmt] = id; }
@@ -1543,7 +1624,7 @@ const XL = (() => {
         `<sheetViews><sheetView workbookViewId="0" showGridLines="0" zoomScale="100">${pane}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/>${cols}` +
         `<sheetData>${filas.join("")}</sheetData>${this.filtro ? `<autoFilter ref="${this.filtro}"/>` : ""}` +
         (this.merges.length ? `<mergeCells count="${this.merges.length}">${this.merges.map(m => `<mergeCell ref="${m}"/>`).join("")}</mergeCells>` : "") +
-        `${barras}<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/></worksheet>`;
+        `${barras}<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup orientation="${this.vertical ? "portrait" : "landscape"}" fitToWidth="1" fitToHeight="0"/></worksheet>`;
     }
   }
 
@@ -1886,7 +1967,7 @@ async function armarExcel() {
   // ===== VENTAS =====
   if (incl("ventas")) {
     const filas = [...ventasLineas].sort((a, b) => b.v.fechaMs - a.v.fechaMs).map(({ v, a }) =>
-      [aFecha(v.fechaMs), v.id.slice(-6).toUpperCase(), v.comprador || "", a.arete, nombreLote(a.lote), a.peso, v.precioKg, (a.peso || 0) * (v.precioKg || 0), v.notas || ""]);
+      [aFecha(v.fechaMs), v.ticket || v.id.slice(-6).toUpperCase(), v.comprador || "", a.arete, nombreLote(a.lote), a.peso, v.precioKg, (a.peso || 0) * (v.precioKg || 0), v.notas || ""]);
     const cols = [{ t: "Fecha", w: 12, tipo: "fecha" }, { t: "N° venta", w: 10, h: "center" }, { t: "Comprador", w: 20 }, { t: "Arete", w: 10, b: 1 }, { t: "Lote", w: 14 },
       { t: "Peso", w: 11, tipo: "kg" }, { t: "Precio por kg", w: 12, tipo: "dinero" }, { t: "Monto", w: 14, tipo: "dinero", b: 1 }, { t: "Notas", w: 24, wrap: 1 }];
     const kgT = filas.reduce((t, f) => t + (f[5] || 0), 0), totT = filas.reduce((t, f) => t + f[7], 0);
@@ -2229,6 +2310,383 @@ $("btnImportar").onclick = () => {
   filasImp = []; $("archivoImp").value = ""; $("impPrevia").innerHTML = ""; $("impResumen").innerHTML = ""; $("btnImportar").classList.add("oculto");
   ir("animales");
 };
+
+// ======================================================================
+//  VENTA CON PESAJE, TICKET Y BITÁCORA
+// ======================================================================
+let nvItems = [];    // { id, arete, pesoBruto, fuente: "bascula" | "manual" | "ultimo" }
+let ultimoTicket = null;
+
+function bajarArchivo(blob, nombre) {
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  return new File([blob], nombre, { type: blob.type });
+}
+
+function prepararNuevaVenta() {
+  if (!$("nvFecha").value) $("nvFecha").value = hoyISO();
+  try { if (!$("nvFinca").value) $("nvFinca").value = localStorage.getItem("finca_nombre") || ""; } catch (_) {}
+  nvPintar(); nvInfo();
+}
+$("nvVolver").onclick = () => {
+  if (nvItems.length && !confirm("Hay animales agregados sin confirmar. ¿Salir y descartar?")) return;
+  nvItems = []; ir("ventas");
+};
+$("nvConectar").onclick = () => $("btnCon").click();
+$("nvManual").onchange = () => { $("nvManualBox").classList.toggle("oculto", !$("nvManual").checked); nvBoton(); };
+$("nvPesoManual").oninput = nvBoton;
+$("nvArete").oninput = nvInfo;
+["nvPrecio", "nvDesbaste"].forEach(id => $(id).oninput = nvPintar);
+
+function nvInfo() {
+  const t = $("nvArete").value.trim(), a = buscarArete(t);
+  if (!t) $("nvInfo").innerHTML = "";
+  else if (!a) $("nvInfo").innerHTML = '<span class="chip mal">Arete no registrado</span>';
+  else if (a.estado !== "activo") $("nvInfo").innerHTML = `<span class="chip mal">Este animal está ${esc(a.estado)}</span>`;
+  else {
+    const ret = retiroHasta(a.id), obj = lotes.get(a.lote)?.pesoObjetivo;
+    $("nvInfo").innerHTML = `<b>${esc(a.nombre || a.arete)}</b> · ${esc(a.sexo || "")} · ${esc(nombreLote(a.lote))}<br>Último peso: ${kg(a.pesoActual)} (${fecha(a.fechaUltPeso)}) · GDP: ${gdpTxt(a.gdpTotal)}` +
+      (ret ? `<br><span class="chip mal">⚠ En retiro hasta ${fecha(ret)}</span>` : "") + (obj && a.pesoActual >= obj ? ' <span class="chip ok">Listo para venta</span>' : "") +
+      (nvItems.some(i => i.id === a.id) ? '<br><span class="chip amar">Ya está en esta venta</span>' : "");
+  }
+  nvBoton();
+}
+function nvBoton() {
+  const a = buscarArete($("nvArete").value);
+  const pesoOk = $("nvManual").checked ? Number($("nvPesoManual").value) > 0 : (estable && pesoActual > 0);
+  $("nvAgregar").disabled = !(a && a.estado === "activo" && !nvItems.some(i => i.id === a.id) && pesoOk);
+}
+
+$("nvAgregar").onclick = () => {
+  const a = buscarArete($("nvArete").value);
+  if (!a) return;
+  if (retiroHasta(a.id) && !confirm(`⚠ ${a.arete} está en período de retiro hasta ${fecha(retiroHasta(a.id))}. ¿Agregarlo de todas formas?`)) return;
+  const manual = $("nvManual").checked;
+  nvItems.push({ id: a.id, arete: a.arete, pesoBruto: manual ? Number($("nvPesoManual").value) : pesoActual, fuente: manual ? "manual" : "bascula" });
+  $("nvArete").value = ""; $("nvPesoManual").value = "";
+  ultimas = []; estable = false;
+  nvInfo(); nvPintar();
+  $("nvArete").focus();
+};
+
+$("nvLista").onclick = () => {
+  abrirModal(`<h2>Agregar desde lista</h2>
+    <div class="sub">Se usa el último peso registrado de cada animal.</div>
+    <label>Lote</label><select id="nlLote"><option value="">Todos los lotes</option>${opcionesLote("", false)}</select>
+    <button class="btn peq" style="margin-top:8px" id="nlListos">Marcar los listos para venta</button>
+    <div id="nlLista" style="margin-top:8px;max-height:50vh;overflow-y:auto"></div>
+    <button class="btn verde" id="nlOk">Agregar marcados</button>
+    <button class="btn gris" id="nlCancelar">Cancelar</button>`);
+  const marcados = new Set();
+  const pintar = () => {
+    const fl = $("nlLote").value;
+    const an = [...animales.values()].filter(a => a.estado === "activo" && (!fl || a.lote === fl) && !nvItems.some(i => i.id === a.id))
+      .sort((a, b) => String(a.arete).localeCompare(String(b.arete), "es", { numeric: true }));
+    $("nlLista").innerHTML = an.length ? an.map(a => {
+      const obj = lotes.get(a.lote)?.pesoObjetivo, ret = retiroHasta(a.id);
+      return `<label class="card chk" style="margin:0 0 6px;color:#e8f0ea;font-size:15px">
+        <input type="checkbox" data-id="${a.id}" ${marcados.has(a.id) ? "checked" : ""} ${a.pesoActual > 0 ? "" : "disabled"}>
+        <span style="flex:1"><b>${esc(a.arete)}</b> · ${a.pesoActual > 0 ? kg(a.pesoActual) + " (" + fecha(a.fechaUltPeso) + ")" : "sin peso"}<br><span class="sub">${esc(nombreLote(a.lote))}</span>
+        ${obj && a.pesoActual >= obj ? '<span class="chip ok">Listo</span>' : ""} ${ret ? '<span class="chip mal">En retiro</span>' : ""}</span></label>`;
+    }).join("") : '<div class="vacio">No hay animales disponibles.</div>';
+  };
+  $("nlLista").onchange = e => { const id = e.target.dataset.id; if (id) e.target.checked ? marcados.add(id) : marcados.delete(id); };
+  $("nlLote").onchange = pintar;
+  $("nlListos").onclick = () => {
+    const fl = $("nlLote").value;
+    [...animales.values()].filter(a => a.estado === "activo" && (!fl || a.lote === fl) && lotes.get(a.lote)?.pesoObjetivo && a.pesoActual >= lotes.get(a.lote).pesoObjetivo && !retiroHasta(a.id) && !nvItems.some(i => i.id === a.id))
+      .forEach(a => marcados.add(a.id));
+    pintar();
+  };
+  $("nlCancelar").onclick = cerrarModal;
+  $("nlOk").onclick = () => {
+    const sel = [...marcados].map(id => animales.get(id)).filter(a => a && a.pesoActual > 0);
+    const ret = sel.filter(a => retiroHasta(a.id));
+    if (ret.length && !confirm("⚠ En período de retiro: " + ret.map(a => a.arete).join(", ") + ". ¿Agregarlos de todas formas?")) return;
+    sel.forEach(a => nvItems.push({ id: a.id, arete: a.arete, pesoBruto: a.pesoActual, fuente: "ultimo" }));
+    cerrarModal(); nvPintar(); nvInfo();
+  };
+  pintar();
+};
+
+function nvCalculo() {
+  const precio = Number($("nvPrecio").value) || 0, des = Math.min(Math.max(Number($("nvDesbaste").value) || 0, 0), 50) / 100;
+  const lineas = nvItems.map(i => { const neto = Math.round(i.pesoBruto * (1 - des) * 10) / 10; return { ...i, neto, monto: neto * precio }; });
+  return { precio, des, lineas, bruto: lineas.reduce((t, l) => t + l.pesoBruto, 0), neto: lineas.reduce((t, l) => t + l.neto, 0), total: lineas.reduce((t, l) => t + l.monto, 0) };
+}
+function nvPintar() {
+  const c = nvCalculo();
+  const fuente = { bascula: "⚖️", manual: "✍️", ultimo: "📋" };
+  $("nvItems").innerHTML = c.lineas.length ? "<table><tr><th>Arete</th><th>Bruto</th><th>Neto</th><th>Monto</th><th></th></tr>" +
+    c.lineas.map((l, k) => `<tr><td><b>${esc(l.arete)}</b> ${fuente[l.fuente]}</td><td>${kg(l.pesoBruto)}</td><td>${kg(l.neto)}</td><td>${dinero(l.monto)}</td>
+      <td><button class="btn rojo peq" data-quitar="${k}">✕</button></td></tr>`).join("") + "</table>" +
+    '<div class="sub" style="margin-top:6px">⚖️ pesado ahora · ✍️ peso manual · 📋 último peso</div>'
+    : '<div class="vacio">Pesa un animal y tócalo en "Agregar a la venta".</div>';
+  $("nvTotales").innerHTML = `<div><b>${c.lineas.length}</b><span>Animales</span></div><div><b>${num(c.bruto)}</b><span>Kg brutos</span></div>
+    <div><b>${num(c.neto)}</b><span>Kg netos</span></div><div><b style="color:#39ff7a">${dinero(c.total)}</b><span>Total</span></div>`;
+}
+$("nvItems").onclick = e => { const k = e.target.dataset.quitar; if (k != null) { nvItems.splice(+k, 1); nvPintar(); nvInfo(); } };
+
+$("nvConfirmar").onclick = async () => {
+  const c = nvCalculo();
+  if (!c.lineas.length) return alert("Agrega al menos un animal.");
+  if (!(c.precio > 0)) return alert("Indica el precio por kg.");
+  const comprador = $("nvComprador").value.trim();
+  if (!comprador) return alert("Indica el nombre del comprador.");
+  const modo = $("nvModo").value;
+  const nTickets = modo === "individual" ? c.lineas.length : 1;
+  if (!confirm(`Confirmar venta de ${c.lineas.length} animal(es) a ${comprador}\n${num(c.neto)} kg netos · ${dinero(c.total)}\nSe generará${nTickets > 1 ? "n" : ""} ${nTickets} ticket${nTickets > 1 ? "s" : ""}.`)) return;
+
+  const ahora = Date.now();
+  const fSel = $("nvFecha").value;
+  const fechaMs = !fSel || fSel === hoyISO() ? ahora : isoAms(fSel);
+  const finca = $("nvFinca").value.trim();
+  try { localStorage.setItem("finca_nombre", finca); } catch (_) {}
+  const base = {
+    fechaMs, comprador, documento: $("nvDoc").value.trim(), telefono: $("nvTel").value.trim(), destino: $("nvDestino").value.trim(),
+    placa: $("nvPlaca").value.trim(), guia: $("nvGuia").value.trim(), notas: $("nvNotas").value.trim(), finca,
+    precioKg: c.precio, desbaste: c.des * 100, modo, usuario, creadoMs: ahora
+  };
+  const ymd = msAiso(fechaMs).replace(/-/g, "");
+  const grupos = modo === "individual" ? c.lineas.map(l => [l]) : [c.lineas];
+  const creadas = [];
+
+  for (const g of grupos) {
+    const ref = doc(collection(db, "ventas"));
+    const ticket = `V-${ymd}-${ref.id.slice(-4).toUpperCase()}`;
+    const lineas = g.map(l => {
+      const a = animales.get(l.id);
+      let gdp = null;
+      if (l.fuente !== "ultimo" && a.pesoActual != null && a.fechaUltPeso) { const d = (fechaMs - a.fechaUltPeso) / DIA; if (d >= 1) gdp = (l.pesoBruto - a.pesoActual) / d; }
+      return { id: l.id, arete: l.arete, pesoBruto: l.pesoBruto, peso: l.neto, monto: l.monto, lote: a.lote || "", fuente: l.fuente, gdp };
+    });
+    const venta = { ...base, ticket, animales: lineas, pesoBruto: lineas.reduce((t, l) => t + l.pesoBruto, 0), pesoTotal: lineas.reduce((t, l) => t + l.peso, 0), total: lineas.reduce((t, l) => t + l.monto, 0) };
+    setDoc(ref, venta).catch(errorGuardar);
+    creadas.push({ id: ref.id, ...venta });
+
+    for (const l of lineas) {
+      const a = animales.get(l.id), cambios = { estado: "vendido", fechaBajaMs: fechaMs, ventaId: ref.id, precioVentaKg: c.precio, ticketVenta: ticket };
+      if (l.fuente !== "ultimo") {
+        // Pesada de salida: queda en el historial del animal
+        setDoc(doc(collection(db, "pesadas")), { animalId: a.id, arete: a.arete, peso: l.pesoBruto, fechaMs, lote: a.lote || "", sesionId: null, gdp: l.gdp, usuario, tipo: "venta", ventaId: ref.id }).catch(errorGuardar);
+        const pIni = a.pesoInicial ?? l.pesoBruto, fIni = a.fechaPesoInicial ?? fechaMs, dT = (fechaMs - fIni) / DIA;
+        Object.assign(cambios, { pesoActual: l.pesoBruto, fechaUltPeso: fechaMs, pesoInicial: pIni, fechaPesoInicial: fIni, gdpUltima: l.gdp ?? a.gdpUltima ?? null, gdpTotal: dT >= 1 ? (l.pesoBruto - pIni) / dT : (a.gdpTotal ?? null) });
+      }
+      updateDoc(doc(db, "animales", a.id), cambios).catch(errorGuardar);
+      Object.assign(a, cambios);
+    }
+  }
+
+  nvItems = []; nvPintar();
+  $("nvResultado").style.display = "block";
+  $("nvResultado").innerHTML = `<b>✔ Venta registrada</b><div class="sub" style="margin-top:4px">${creadas.map(v => esc(v.ticket)).join(" · ")}</div>
+    <div class="sub">Generando el Excel...</div>`;
+  try {
+    ultimoTicket = await descargarTickets(creadas);
+    $("nvResultado").innerHTML = `<b>✔ Venta registrada: ${creadas.length} ticket${creadas.length > 1 ? "s" : ""}</b>
+      <div class="sub" style="margin-top:4px">${creadas.map(v => esc(v.ticket)).join(" · ")}</div>
+      <div class="sub">El Excel quedó en <b>Descargas</b>.</div>
+      <button class="btn" id="nvBajar">📥 Descargar de nuevo</button>
+      ${navigator.canShare && navigator.canShare({ files: [ultimoTicket] }) ? '<button class="btn" id="nvCompartir">📤 Compartir (WhatsApp, correo...)</button>' : ""}
+      <button class="btn gris" id="nvOtra">Hacer otra venta</button>`;
+    $("nvBajar").onclick = () => bajarArchivo(ultimoTicket, ultimoTicket.name);
+    if ($("nvCompartir")) $("nvCompartir").onclick = () => navigator.share({ files: [ultimoTicket], title: ultimoTicket.name, text: "Ticket de venta de ganado" }).catch(() => {});
+    $("nvOtra").onclick = () => { $("nvResultado").style.display = "none"; ["nvComprador", "nvDoc", "nvTel", "nvDestino", "nvPlaca", "nvGuia", "nvNotas"].forEach(id => $(id).value = ""); window.scrollTo(0, 0); };
+  } catch (e) { console.error(e); $("nvResultado").innerHTML += `<div class="aviso">No se pudo generar el Excel: ${esc(e.message)}. Puedes generarlo desde Ventas → tocar la venta.</div>`; }
+  $("nvResultado").scrollIntoView({ behavior: "smooth" });
+};
+
+// ---------------- Excel: tickets + bitácoras ----------------
+async function descargarTickets(lista) {
+  const libro = new XL.Libro(), usados = new Set();
+  lista.forEach(v => hojaTicket(libro, v));
+  for (const v of lista) for (const l of v.animales || []) {
+    const a = animales.get(l.id);
+    if (a) await hojaBitacora(libro, a, v, usados);
+  }
+  const nombre = lista.length === 1 ? `Ticket_${lista[0].ticket || "venta"}.xlsx` : `Tickets_venta_${hoyISO()}_${lista.length}.xlsx`;
+  return bajarArchivo(libro.blob(), nombre);
+}
+
+function hojaTicket(libro, v) {
+  const E = libro.est, h = libro.hoja("Ticket " + (v.ticket || v.id.slice(-6)), PAL.medio);
+  h.vertical = true;
+  h.anchos = [5, 11, 14, 9, 11, 8, 11, 9, 11, 11, 14];
+  const U = 10, fondo = (r, c1, c2, st) => { for (let c = c1; c <= c2; c++) h.set(r, c, "", st); };
+  const tit = E.get({ b: 1, sz: 18, color: "FFFFFF", fill: PAL.oscuro, h: "center" });
+  fondo(0, 0, U, tit); h.set(0, 0, (v.finca ? v.finca.toUpperCase() + " — " : "") + "TICKET DE VENTA DE GANADO", tit); h.unir(0, 0, 0, U); h.altos[0] = 38;
+  const st2 = E.get({ b: 1, sz: 12, color: "FFFFFF", fill: PAL.claro, h: "center" });
+  fondo(1, 0, U, st2); h.set(1, 0, `N° ${v.ticket || v.id.slice(-6).toUpperCase()}   ·   ${new Date(v.fechaMs).toLocaleString("es-VE")}`, st2); h.unir(1, 0, 1, U); h.altos[1] = 24;
+
+  const lab = E.get({ b: 1, sz: 10, color: "4B6B57", fill: PAL.kpi, borde: 1 }), val = E.get({ borde: 1, b: 1 });
+  const datos = [
+    ["Comprador", v.comprador, "Precio por kg", dinero(v.precioKg)],
+    ["Cédula / RIF", v.documento, "Desbaste", v.desbaste ? num(v.desbaste, 1) + " %" : "No aplica"],
+    ["Teléfono", v.telefono, "Placa del vehículo", v.placa],
+    ["Destino", v.destino, "N° guía de movilización", v.guia],
+    ["Vendedor", v.usuario, "Tipo de venta", v.modo === "lote" ? "Por lote" : "Individual"]
+  ];
+  let r = 3;
+  datos.forEach(([l1, v1, l2, v2]) => {
+    fondo(r, 0, 1, lab); h.set(r, 0, l1, lab); h.unir(r, 0, r, 1);
+    fondo(r, 2, 5, val); h.set(r, 2, v1 || "—", val); h.unir(r, 2, r, 5);
+    fondo(r, 6, 7, lab); h.set(r, 6, l2, lab); h.unir(r, 6, r, 7);
+    fondo(r, 8, U, val); h.set(r, 8, v2 || "—", val); h.unir(r, 8, r, U);
+    h.altos[r] = 22; r++;
+  });
+
+  r++;
+  const cab = ["N°", "Arete", "Nombre", "Sexo", "Raza", "Edad (m)", "Peso bruto", "Desbaste", "Peso neto", "Precio / kg", "Monto"];
+  const tipos = ["num", "txt", "txt", "txt", "txt", "num", "kg", "txt", "kg", "dinero", "dinero"];
+  cab.forEach((t, i) => h.set(r, i, t, E.get({ b: 1, color: "FFFFFF", fill: PAL.medio, h: "center", wrap: 1, borde: 1 })));
+  h.altos[r] = 30; const ini = r + 1;
+  (v.animales || []).forEach((l, k) => {
+    r++;
+    const a = animales.get(l.id) || {};
+    const edad = a.fechaNacMs ? Math.floor((v.fechaMs - a.fechaNacMs) / (30.44 * DIA)) : null;
+    const bruto = l.pesoBruto ?? l.peso;
+    const fila = [k + 1, l.arete, a.nombre || "", a.sexo || "", a.raza || "", edad, bruto, v.desbaste ? num(v.desbaste, 1) + "%" : "—", l.peso, v.precioKg, l.monto ?? l.peso * v.precioKg];
+    fila.forEach((x, i) => h.set(r, i, x ?? "", E.get({ fill: k % 2 ? PAL.cebra : "FFFFFF", borde: 1, fmt: FMT[tipos[i]], h: tipos[i] === "txt" ? (i === 7 ? "center" : "left") : "right", b: [1, 10].includes(i) ? 1 : 0 })));
+  });
+  if ((v.animales || []).length > 1) h.barra(ini, r, 8, "63BE7B");
+  r++;
+  const tot = E.get({ b: 1, color: "FFFFFF", fill: PAL.oscuro, borde: 1, h: "right" });
+  const totF = t => E.get({ b: 1, color: "FFFFFF", fill: PAL.oscuro, borde: 1, h: "right", fmt: FMT[t] });
+  fondo(r, 0, U, tot);
+  h.set(r, 0, `${(v.animales || []).length} animal(es)`, E.get({ b: 1, color: "FFFFFF", fill: PAL.oscuro, borde: 1 })); h.unir(r, 0, r, 2);
+  h.set(r, 6, v.pesoBruto ?? v.pesoTotal, totF("kg")); h.set(r, 8, v.pesoTotal, totF("kg")); h.set(r, 10, v.total, totF("dinero"));
+  h.altos[r] = 24;
+
+  // Tarjetas de totales
+  r += 2;
+  const tarjetas = [["Animales", (v.animales || []).length, "num", 0, 1], ["Kg brutos", v.pesoBruto ?? v.pesoTotal, "kg", 2, 4], ["Kg netos", v.pesoTotal, "kg", 5, 7], ["TOTAL A PAGAR", v.total, "dinero", 8, U]];
+  tarjetas.forEach(([t, x, tipo, c1, c2]) => {
+    const sl = E.get({ b: 1, sz: 9, color: "4B6B57", fill: PAL.kpi, h: "center" });
+    const sv = E.get({ b: 1, sz: c1 === 8 ? 22 : 18, color: c1 === 8 ? "FFFFFF" : PAL.medio, fill: c1 === 8 ? PAL.medio : PAL.kpi, h: "center", fmt: FMT[tipo] });
+    fondo(r, c1, c2, c1 === 8 ? E.get({ b: 1, sz: 9, color: "FFFFFF", fill: PAL.medio, h: "center" }) : sl);
+    h.set(r, c1, t, c1 === 8 ? E.get({ b: 1, sz: 9, color: "FFFFFF", fill: PAL.medio, h: "center" }) : sl); h.unir(r, c1, r, c2);
+    fondo(r + 1, c1, c2, sv); h.set(r + 1, c1, x, sv); h.unir(r + 1, c1, r + 1, c2);
+  });
+  h.altos[r] = 18; h.altos[r + 1] = 40;
+  r += 3;
+
+  // Declaración sanitaria
+  const enRet = (v.animales || []).filter(l => {
+    for (const s of sanidad) if (s.retiroDias && (s.animales || []).includes(l.id) && s.fechaMs + s.retiroDias * DIA > v.fechaMs) return true;
+    return false;
+  });
+  const decl = enRet.length ? `⚠ ATENCIÓN: ${enRet.map(l => l.arete).join(", ")} estaba(n) dentro del período de retiro de algún medicamento al momento de la venta.`
+    : "✔ Declaración sanitaria: ningún animal de este ticket se encontraba en período de retiro de medicamentos al momento de la venta.";
+  const sd = E.get({ b: 1, sz: 10, color: enRet.length ? "9C0006" : "1E6B3D", fill: enRet.length ? PAL.rojo : PAL.verde, wrap: 1, borde: 1 });
+  fondo(r, 0, U, sd); h.set(r, 0, decl, sd); h.unir(r, 0, r, U); h.altos[r] = 32; r++;
+  if (v.notas) { const so = E.get({ i: 1, sz: 10, wrap: 1, borde: 1 }); fondo(r, 0, U, so); h.set(r, 0, "Observaciones: " + v.notas, so); h.unir(r, 0, r, U); h.altos[r] = 30; r++; }
+
+  // Firmas
+  r += 3;
+  const ln = E.get({ linea: 1 }), fl = E.get({ sz: 10, color: "4B6B57", h: "center" });
+  fondo(r, 0, 4, ln); h.unir(r, 0, r, 4); fondo(r, 6, U, ln); h.unir(r, 6, r, U); h.altos[r] = 30;
+  h.set(r + 1, 0, "Entregado por (vendedor)", fl); h.unir(r + 1, 0, r + 1, 4);
+  h.set(r + 1, 6, "Recibido conforme (comprador)", fl); h.unir(r + 1, 6, r + 1, U);
+  h.set(r + 3, 0, "Generado con Báscula Ganadera · " + new Date().toLocaleString("es-VE"), E.get({ i: 1, sz: 8, color: "8A9A90" }));
+}
+
+async function hojaBitacora(libro, a, venta, usados) {
+  const E = libro.est;
+  let nombre = "Bitácora " + a.arete, n = 2;
+  while (usados.has(nombre)) nombre = "Bitácora " + a.arete + " (" + n++ + ")";
+  usados.add(nombre);
+  const h = libro.hoja(nombre.slice(0, 31), "8E44AD");
+  h.anchos = [13, 15, 22, 34, 11, 11, 13];
+  const U = 6, fondo = (r, c1, c2, st) => { for (let c = c1; c <= c2; c++) h.set(r, c, "", st); };
+
+  let ps = [];
+  try { const sn = await getDocs(query(collection(db, "pesadas"), where("animalId", "==", a.id))); ps = sn.docs.map(d => d.data()).sort((x, y) => x.fechaMs - y.fechaMs); } catch (_) {}
+  const sanA = sanidad.filter(s => (s.animales || []).includes(a.id)).sort((x, y) => x.fechaMs - y.fechaMs);
+  const repA = repro.filter(e => e.animalId === a.id).sort((x, y) => x.fechaMs - y.fechaMs);
+  const linea = venta ? (venta.animales || []).find(l => l.id === a.id) : null;
+  const ingreso = linea ? (linea.monto ?? linea.peso * venta.precioKg) : null;
+  const costoSan = sanA.reduce((t, s) => t + (s.costo || 0) / ((s.animales || []).length || 1), 0);
+  const fin = a.estado === "activo" ? Date.now() : (a.fechaBajaMs || Date.now());
+  const inicio = a.fechaPesoInicial || a.creadoMs || (ps[0] && ps[0].fechaMs);
+  const diasFinca = inicio ? Math.round((fin - inicio) / DIA) : null;
+  const pIni = a.pesoInicial ?? ps[0]?.peso ?? null, pFin = linea?.pesoBruto ?? a.pesoActual ?? null;
+
+  const tit = E.get({ b: 1, sz: 16, color: "FFFFFF", fill: "5B2C6F" });
+  fondo(0, 0, U, tit); h.set(0, 0, `BITÁCORA DEL ANIMAL — ${a.arete}${a.nombre ? " · " + a.nombre : ""}`, tit); h.unir(0, 0, 0, U); h.altos[0] = 34;
+  const s2 = E.get({ i: 1, sz: 10, color: "FFFFFF", fill: "8E44AD" });
+  fondo(1, 0, U, s2);
+  h.set(1, 0, a.estado === "vendido" ? `Vendido el ${fecha(a.fechaBajaMs)}${venta ? " · Ticket " + venta.ticket + " · Comprador: " + venta.comprador : ""}` : a.estado === "muerto" ? `Murió el ${fecha(a.fechaBajaMs)} · ${a.causaBaja || ""}` : "Animal activo · historial al " + fecha(Date.now()), s2);
+  h.unir(1, 0, 1, U); h.altos[1] = 20;
+
+  // Ficha
+  const lab = E.get({ b: 1, sz: 10, color: "4B6B57", fill: PAL.kpi, borde: 1 }), val = E.get({ borde: 1 });
+  const edad = a.fechaNacMs ? Math.floor((fin - a.fechaNacMs) / (30.44 * DIA)) + " meses" : "—";
+  const ficha = [
+    ["Arete", a.arete, "Sexo", a.sexo], ["Nombre", a.nombre, "Raza", a.raza], ["Nacimiento", a.fechaNacMs ? fecha(a.fechaNacMs) : "—", "Edad", edad],
+    ["Origen", a.origen, "Costo de compra", a.costoCompra ? dinero(a.costoCompra) : "—"], ["Madre", a.madre, "Padre", a.padre],
+    ["Lote", nombreLote(a.lote), "Potrero", nombrePotrero(lotes.get(a.lote)?.potrero)], ["Estado", a.estado, "Notas", a.notas]
+  ];
+  let r = 3;
+  ficha.forEach(([l1, v1, l2, v2]) => {
+    h.set(r, 0, l1, lab); fondo(r, 1, 2, val); h.set(r, 1, v1 || "—", val); h.unir(r, 1, r, 2);
+    h.set(r, 3, l2, lab); fondo(r, 4, U, val); h.set(r, 4, v2 || "—", val); h.unir(r, 4, r, U); r++;
+  });
+
+  // Indicadores
+  r++;
+  const kpis = [["Peso inicial", pIni, "kg"], ["Peso final", pFin, "kg"], ["Kg ganados", pIni != null && pFin != null ? pFin - pIni : null, "dif"],
+    ["GDP total", a.gdpTotal, "gdp"], ["Días en control", diasFinca, "num"], ["N° pesadas", ps.length, "num"], ["Ingreso venta", ingreso, "dinero"]];
+  kpis.forEach(([t, x, tipo], i) => {
+    h.set(r, i, t, E.get({ b: 1, sz: 9, color: "4B6B57", fill: PAL.kpi, h: "center", wrap: 1 }));
+    h.set(r + 1, i, x ?? "—", E.get({ b: 1, sz: 15, color: PAL.medio, fill: PAL.kpi, h: "center", fmt: FMT[tipo] }));
+  });
+  h.altos[r] = 26; h.altos[r + 1] = 34; r += 3;
+
+  // Rentabilidad
+  if (ingreso != null || a.costoCompra) {
+    const margen = (ingreso || 0) - (a.costoCompra || 0) - costoSan;
+    const rl = E.get({ b: 1, color: "4B6B57", fill: PAL.kpi, borde: 1 }), rv = E.get({ borde: 1, fmt: FMT.dinero, h: "right" });
+    h.set(r, 0, "RENTABILIDAD (aprox.)", E.get({ b: 1, sz: 12, color: PAL.medio })); r++;
+    [["Ingreso de la venta", ingreso || 0], ["Costo de compra", -(a.costoCompra || 0)], ["Costo de sanidad", -costoSan]].forEach(([t, x]) => {
+      fondo(r, 0, 1, rl); h.set(r, 0, t, rl); h.unir(r, 0, r, 1); h.set(r, 2, x, rv); r++;
+    });
+    const mv = E.get({ b: 1, borde: 1, fmt: FMT.dinero, h: "right", fill: margen >= 0 ? PAL.verde : PAL.rojo, sz: 13 });
+    fondo(r, 0, 1, E.get({ b: 1, color: "FFFFFF", fill: PAL.oscuro, borde: 1 })); h.set(r, 0, "MARGEN BRUTO", E.get({ b: 1, color: "FFFFFF", fill: PAL.oscuro, borde: 1 })); h.unir(r, 0, r, 1);
+    h.set(r, 2, margen, mv); h.altos[r] = 24;
+    h.set(r, 3, "No incluye alimentación, mano de obra ni otros gastos.", E.get({ i: 1, sz: 9, color: "8A9A90" }));
+    r += 2;
+  }
+
+  // Línea de tiempo
+  h.set(r, 0, "HISTORIAL COMPLETO", E.get({ b: 1, sz: 12, color: PAL.medio })); r++;
+  const ev = [];
+  if (a.fechaNacMs) ev.push([a.fechaNacMs, "Nacimiento", "Nacimiento", a.madre ? "Madre: " + a.madre : "", null, null, null]);
+  if (a.creadoMs) ev.push([a.creadoMs, "Registro", "Alta en la app", [a.origen, a.cargaInicial ? "carga inicial" : "", a.costoCompra ? "costo " + dinero(a.costoCompra) : ""].filter(Boolean).join(" · "), null, null, null]);
+  ps.forEach((p, k) => {
+    const ant = ps[k - 1], dif = ant ? p.peso - ant.peso : null, d = ant ? (p.fechaMs - ant.fechaMs) / DIA : null;
+    const tipo = p.tipo === "venta" ? "Pesaje de venta" : p.cargaInicial ? "Pesaje inicial" : p.sesionId ? "Pesaje en lote" : "Pesaje individual";
+    ev.push([p.fechaMs, "Pesaje", tipo, p.lote ? "Lote: " + nombreLote(p.lote) : "", p.peso, dif, d >= 1 ? dif / d : null]);
+  });
+  sanA.forEach(s => ev.push([s.fechaMs, "Sanidad", (TIPOS_SAN[s.tipo] || s.tipo) + ": " + s.producto,
+    [s.dosis, s.retiroDias ? "retiro " + s.retiroDias + " días (hasta " + fecha(s.fechaMs + s.retiroDias * DIA) + ")" : "", s.aplicaA === "lote" ? "aplicado al lote" : ""].filter(Boolean).join(" · "), null, null, null]));
+  repA.forEach(e => ev.push([e.fechaMs, "Reproducción", TIPOS[e.tipo] || e.tipo, detalleEvento(e) + (e.notas && e.tipo !== "aborto" ? (detalleEvento(e) ? " · " : "") + e.notas : ""), null, null, null]));
+  if (a.estado === "vendido") ev.push([a.fechaBajaMs, "Venta", "Salida por venta", venta ? `Ticket ${venta.ticket} · ${venta.comprador} · ${kg(linea?.peso)} netos a ${dinero(venta.precioKg)}/kg = ${dinero(ingreso)}` : "", null, null, null]);
+  if (a.estado === "muerto") ev.push([a.fechaBajaMs, "Baja", "Muerte", a.causaBaja || "", null, null, null]);
+  ev.sort((x, y) => x[0] - y[0]);
+
+  const cab = ["Fecha", "Tipo", "Evento", "Detalle", "Peso", "Diferencia", "GDP"], tipos = ["fecha", "txt", "txt", "txt", "kg", "dif", "gdp"];
+  cab.forEach((t, i) => h.set(r, i, t, E.get({ b: 1, color: "FFFFFF", fill: "5B2C6F", h: "center", borde: 1 })));
+  h.altos[r] = 24; const ini = r + 1;
+  const colores = { Pesaje: "FFFFFF", Sanidad: "FDE9E7", "Reproducción": "F1E6F7", Venta: PAL.verde, Baja: "E7E6E6", Nacimiento: "FFF6D6", Registro: "E3F1E7" };
+  ev.forEach(e => {
+    r++;
+    const fillC = e[2] === "Pesaje de venta" ? "DDEBF7" : colores[e[1]] || "FFFFFF";
+    e.forEach((x, i) => h.set(r, i, i === 0 ? aFecha(x) : x ?? "", E.get({ fill: fillC, borde: 1, fmt: FMT[tipos[i]], h: tipos[i] === "txt" ? "left" : "right", wrap: i === 3 ? 1 : 0, b: i === 1 || i === 4 ? 1 : 0 })));
+  });
+  if (r >= ini) h.barra(ini, r, 4, "63BE7B");
+  h.freeze = 0;
+}
 </script>
 </body>
 </html>
