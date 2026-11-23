@@ -157,7 +157,7 @@
     <path d="M150 315 C 168 228, 268 190, 345 205 S 445 280, 428 362 S 368 492, 285 492 S 133 400, 150 315 Z" fill="#ffffff" opacity=".18"/>
   </svg>
   <div class="marca"><img src="icono-192.png" width="84" height="84" style="border-radius:22px;box-shadow:0 8px 22px rgba(0,0,0,.18)" onerror="this.style.display='none'"><b>Báscula Ganadera</b></div>
-  <div class="ver" id="splashVer">v2.3</div>
+  <div class="ver" id="splashVer">v2.3.1</div>
 </div>
 
 <!-- ================= LOGIN ================= -->
@@ -218,7 +218,7 @@
     <h3>📋 Indicadores</h3>
     <div class="stats" id="inKpi1"></div>
     <div class="stats" id="inKpi2"></div>
-    <div class="sub" style="text-align:center;margin-top:18px" id="inVersion">Báscula Ganadera v2.3</div>
+    <div class="sub" style="text-align:center;margin-top:18px" id="inVersion">Báscula Ganadera v2.3.1</div>
     <h3>🔔 Alertas</h3>
     <div id="inAlertas"></div>
     <button class="btn gris oculto" id="btnAvisos">🔔 Activar avisos en el teléfono</button>
@@ -938,8 +938,15 @@ function maxActualizado(docs) {
   docs.forEach(d => { if (d.metadata?.hasPendingWrites) return; const t = d.get ? d.get("actualizado") : null; if (t && t.toMillis) m = Math.max(m, t.toMillis()); });
   return m;
 }
+// Colecciones pequeñas que también se editan a mano en la consola de Firebase:
+// se escuchan completas (no por cambios), así nunca se pierde un documento creado allí.
+const SINC_COMPLETAS = ["usuarios"];
 async function sincronizar(col) {
   const err = e => console.warn("sync " + col, e);
+  if (SINC_COMPLETAS.includes(col)) {
+    desuscribir.push(onSnapshot(collection(db, col), s => { tienda(col).clear(); s.forEach(d => aplicar(col, d.id, d.data())); pedirRefresco(); }, err));
+    return;
+  }
   let ultimo = 0;
   try { ultimo = Number(localStorage.getItem(claveSync(col))) || 0; } catch (_) {}
   // 1) Base: lo que ya está guardado en el teléfono (no gasta lecturas)
@@ -4070,7 +4077,7 @@ let masters = leerJSON("masters_cache", []);
 let validadoHasta = 0;            // la verificación del master dura 10 minutos
 let manualPend = null;            // peso manual pendiente en la pantalla Pesar
 const esMaster = () => DEMO || masters.map(x => String(x).toLowerCase()).includes(String(usuario).toLowerCase())
-  || mapUsuarios.get(String(usuario).toLowerCase())?.rol === "master";
+  || (String(mapUsuarios.get(String(usuario).toLowerCase())?.rol || "").toLowerCase().trim() === "master" && !inactivo(mapUsuarios.get(String(usuario).toLowerCase())));
 
 async function cargarRoles() {
   aplicarRol();   // primero con la lista guardada en el teléfono (sirve sin internet)
@@ -4095,7 +4102,7 @@ function aplicarRol() {
   $("tabExcel").classList.toggle("oculto", !puede("importar"));
   // Usuario desactivado por el master: no puede seguir usando la app
   const yo = mapUsuarios.get(String(usuario).toLowerCase());
-  if (!DEMO && usuario && yo && yo.activo === false && !masters.map(x => String(x).toLowerCase()).includes(String(usuario).toLowerCase())) {
+  if (!DEMO && usuario && yo && inactivo(yo) && !masters.map(x => String(x).toLowerCase()).includes(String(usuario).toLowerCase())) {
     if (!window.__avisoInactivo) { window.__avisoInactivo = true; alert("Tu usuario fue desactivado por el master. Se cerrará la sesión."); signOut(auth); }
   }
 }
@@ -4205,6 +4212,8 @@ $("btnCancelarManual").onclick = quitarManual;
 //  ROLES Y PERMISOS
 // ======================================================================
 const ROLES = { master: "Master", administrador: "Administrador", operador: "Operador" };
+// "activo" puede venir como sí/no o como texto escrito a mano en la consola
+const inactivo = u => u?.activo === false || ["false", "no", "inactivo", "desactivado"].includes(String(u?.activo ?? "").toLowerCase().trim());
 const PERMISOS = {
   ventas: ["master", "administrador"], anularVenta: ["master"], muerte: ["master", "administrador"],
   borrar: ["master", "administrador"], reportes: ["master", "administrador"], importar: ["master", "administrador"],
@@ -4213,7 +4222,8 @@ const PERMISOS = {
 function miRol() {
   if (DEMO || esMaster()) return "master";
   const u = mapUsuarios.get(String(usuario).toLowerCase());
-  return ROLES[u?.rol] ? u.rol : "operador";
+  const r = String(u?.rol || "").toLowerCase().trim();
+  return ROLES[r] && !inactivo(u) ? r : "operador";
 }
 const puede = acc => (PERMISOS[acc] || []).includes(miRol());
 function exigir(acc) {
@@ -4232,12 +4242,12 @@ function renderUsuarios() {
   const lista = [...new Set([...fijos, ...mapUsuarios.keys()])].sort();
   $("usLista").innerHTML = lista.length ? lista.map(email => {
     const u = mapUsuarios.get(email) || {}, fijo = fijos.includes(email), rol = fijo ? "master" : (u.rol || "operador");
-    return `<div class="card" style="${u.activo === false ? "opacity:.55" : ""}">
+    return `<div class="card" style="${inactivo(u) ? "opacity:.55" : ""}">
       <div class="fila"><b>${esc(u.nombre || email)}</b><span class="chip ${rol === "master" ? "ok" : rol === "administrador" ? "amar" : ""}">${ROLES[rol]}</span></div>
-      <div class="sub">${esc(email)}${fijo ? " · master fijo (definido en Firebase)" : ""}${u.activo === false ? " · <b style='color:var(--peligro)'>DESACTIVADO</b>" : ""}</div>
+      <div class="sub">${esc(email)}${fijo ? " · master fijo (definido en Firebase)" : ""}${inactivo(u) ? " · <b style='color:var(--peligro)'>DESACTIVADO</b>" : ""}</div>
       ${fijo ? "" : `<div class="tabs3" style="margin-top:8px">
         <select data-rol="${esc(email)}" style="margin:0;padding:8px">${Object.entries(ROLES).map(([k, v]) => `<option value="${k}" ${k === rol ? "selected" : ""}>${v}</option>`).join("")}</select>
-        <button class="btn gris peq" data-activo="${esc(email)}">${u.activo === false ? "Activar" : "Desactivar"}</button>
+        <button class="btn gris peq" data-activo="${esc(email)}">${inactivo(u) ? "Activar" : "Desactivar"}</button>
         <button class="btn gris peq" data-clave="${esc(email)}">Clave</button></div>`}
     </div>`;
   }).join("") : '<div class="vacio">Todavía no hay usuarios.</div>';
@@ -4248,13 +4258,13 @@ $("usLista").onchange = e => {
   const email = e.target.dataset.rol; if (!email) return;
   const u = mapUsuarios.get(email) || {};
   if (!confirm(`¿Cambiar el rol de ${email} a ${ROLES[e.target.value]}?`)) { e.target.value = u.rol || "operador"; return; }
-  setDoc(doc(db, "usuarios", email), { correo: email, nombre: u.nombre || "", rol: e.target.value, activo: u.activo !== false, modificadoPor: usuario }).catch(errorGuardar);
+  setDoc(doc(db, "usuarios", email), { correo: email, nombre: u.nombre || "", rol: e.target.value, activo: !inactivo(u), modificadoPor: usuario }).catch(errorGuardar);
   auditar("cambio_rol", { objetivo: email, rol: e.target.value });
 };
 $("usLista").onclick = async e => {
   const d = e.target.dataset;
   if (d.activo) {
-    const u = mapUsuarios.get(d.activo) || {}, nuevo = u.activo === false;
+    const u = mapUsuarios.get(d.activo) || {}, nuevo = inactivo(u);
     if (d.activo === String(usuario).toLowerCase() && !nuevo) return alert("No puedes desactivarte a ti mismo.");
     if (!confirm(`¿${nuevo ? "Activar" : "Desactivar"} a ${d.activo}?`)) return;
     setDoc(doc(db, "usuarios", d.activo), { correo: d.activo, nombre: u.nombre || "", rol: u.rol || "operador", activo: nuevo, modificadoPor: usuario }).catch(errorGuardar);
