@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#173524">
+<meta name="theme-color" content="#0b6b45">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Báscula Ganadera</title>
@@ -11,89 +11,265 @@
 <link rel="icon" href="icono-192.png">
 <link rel="apple-touch-icon" href="icono-192.png">
 <style>
+  /* ===== Tema claro con tarjetas (paleta propia: verdes del campo) ===== */
+  :root {
+    --g1: #0f7a4f; --g2: #2a9d5c; --g3: #9ccf3a;          /* degradado principal */
+    --grad: linear-gradient(120deg, #0b6b45 0%, #1f9d5a 55%, #8cc63f 100%);
+    --fondo: #f3f6f4; --tarjeta: #ffffff; --texto: #1d2b23; --suave: #6b7c72; --linea: #e3e9e5;
+    --campo: #f4f7f5; --borde: #d6dfd9; --acento: #0f7a4f; --peligro: #c0392b; --aviso: #b7791f;
+    --sombra: 0 6px 20px rgba(16, 60, 36, .10);
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body { margin: 0; font-family: system-ui, sans-serif; background: #0f1a14; color: #e8f0ea; padding-bottom: calc(80px + env(safe-area-inset-bottom)); overscroll-behavior-y: contain; user-select: none; }
+  body { margin: 0; font-family: "Segoe UI", Roboto, system-ui, sans-serif; background: var(--fondo); color: var(--texto); padding-bottom: calc(96px + env(safe-area-inset-bottom)); overscroll-behavior-y: contain; user-select: none; }
   input, textarea { user-select: text; }
-  header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #173524; }
-  header b { font-size: 18px; }
-  header button { background: none; border: 1px solid #3d6b50; color: #cfe3d6; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
-  main { padding: 14px; max-width: 640px; margin: auto; }
+
+  /* Encabezado con degradado y saludo */
+  header { background: var(--grad); color: #fff; padding: 16px 16px 46px; border-radius: 0 0 26px 26px; }
+  .hdr-top { display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.9); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 19px; background: rgba(255,255,255,.18); flex: none; }
+  .hola { flex: 1; min-width: 0; }
+  #saludo { font-size: 26px; font-weight: 600; letter-spacing: .2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub2 { margin-top: 2px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .campana { position: relative; background: none; border: 0; color: #fff; font-size: 26px; padding: 4px; }
+  .campana .badge { position: absolute; top: 0; right: -2px; background: #7CFC9A; color: #0b4d31; font-size: 11px; font-weight: 800; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 4px; border: 2px solid #1f9d5a; }
+  .hdr-acc { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+  .hdr-acc button { background: rgba(255,255,255,.16); border: 1.5px solid rgba(255,255,255,.75); color: #fff; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; }
+  main { padding: 0 14px 14px; max-width: 640px; margin: -32px auto 0; position: relative; }
+
   .vista { display: none; }
   .vista.activa { display: block; }
-  h2 { font-size: 19px; margin: 6px 0 12px; }
-  h3 { font-size: 16px; margin: 20px 0 8px; color: #b9dcc6; }
-  .card { background: #13261b; border: 1px solid #234a33; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .vista > h2:first-child, .vista > .fila:first-child, .vista > button:first-child { margin-top: 0; }
+  .vista > h2:first-child, .vista > .fila:first-child h2 { background: var(--tarjeta); box-shadow: var(--sombra); border-radius: 18px; padding: 14px 16px; }
+  .vista > .fila:first-child { background: var(--tarjeta); box-shadow: var(--sombra); border-radius: 18px; padding: 8px 12px 8px 0; margin-bottom: 12px; }
+  .vista > .fila:first-child h2 { box-shadow: none; margin: 0; }
+  #v-pesar > .fila { background: var(--tarjeta); box-shadow: var(--sombra); border-radius: 18px; padding: 8px 8px 8px 14px; }
+  h2 { font-size: 20px; margin: 6px 0 12px; font-weight: 700; }
+  h3 { font-size: 16px; margin: 22px 0 8px; color: var(--texto); font-weight: 700; }
+  .card { background: var(--tarjeta); border: 1px solid var(--linea); border-radius: 18px; padding: 14px; margin-bottom: 12px; box-shadow: var(--sombra); }
+  .card .card { box-shadow: none; }
   .card.click { cursor: pointer; }
+  .card.click:active { transform: scale(.99); }
   .fila { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .sub { font-size: 13px; color: #8fb39c; }
-  .chip { display: inline-block; font-size: 12px; padding: 3px 8px; border-radius: 20px; background: #234a33; color: #cfe3d6; }
-  .chip.ok { background: #1e6b3d; } .chip.mal { background: #7a2a2a; } .chip.amar { background: #7a6420; }
+  .sub { font-size: 13px; color: var(--suave); }
+  .chip { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #e8efea; color: var(--texto); font-weight: 600; }
+  .chip.ok { background: #dff3e4; color: #1b6b3a; } .chip.mal { background: #fde3e1; color: #a0281d; } .chip.amar { background: #fff1d6; color: #8a5a00; }
   .estado { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 10px; }
-  .punto { width: 12px; height: 12px; border-radius: 50%; background: #c0392b; flex: none; }
-  .punto.ok { background: #2ecc71; }
-  .visor { background: #000; border-radius: 14px; padding: 18px 12px; text-align: center; border: 2px solid #234a33; }
+  .punto { width: 12px; height: 12px; border-radius: 50%; background: var(--peligro); flex: none; }
+  .punto.ok { background: #22a35a; }
+
+  /* Visor de la báscula: pantalla tipo LCD */
+  .visor { background: #0d1410; border-radius: 18px; padding: 18px 12px; text-align: center; border: 0; box-shadow: inset 0 0 0 2px #1d3326, var(--sombra); }
   .peso { font-family: "Courier New", monospace; font-size: 60px; font-weight: 700; color: #39ff7a; }
   .unidad { font-size: 22px; color: #8fbf9f; }
   .estab { margin-top: 4px; font-size: 15px; font-weight: 600; color: #f1c40f; }
   .estab.si { color: #2ecc71; }
-  button.btn { width: 100%; padding: 14px; font-size: 16px; font-weight: 700; border: 0; border-radius: 10px; margin-top: 10px; cursor: pointer; color: #fff; background: #2e86de; }
-  button.verde { background: #27ae60; } button.gris { background: #555; } button.rojo { background: #b03a2e; } button.peq { padding: 9px; font-size: 14px; width: auto; margin-top: 0; }
-  button:disabled { opacity: .4; }
-  input, select, textarea { width: 100%; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid #2d5a3f; background: #0f1f16; color: #fff; margin-top: 4px; font-family: inherit; }
-  label { display: block; font-size: 13px; color: #8fb39c; margin-top: 10px; }
+
+  /* Botones tipo píldora */
+  button.btn { width: 100%; padding: 14px; font-size: 16px; font-weight: 700; border: 0; border-radius: 999px; margin-top: 10px; cursor: pointer; color: #fff; background: #2f6fb0; box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+  button.verde { background: var(--grad); }
+  button.gris { background: #eef2ef; color: var(--texto); box-shadow: none; border: 1px solid var(--borde); }
+  button.rojo { background: #d9443a; }
+  button.peq { padding: 9px 14px; font-size: 14px; width: auto; margin-top: 0; }
+  button:disabled { opacity: .45; }
+  input, select, textarea { width: 100%; padding: 12px 14px; font-size: 16px; border-radius: 14px; border: 1.5px solid var(--borde); background: var(--campo); color: var(--texto); margin-top: 4px; font-family: inherit; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--g2); background: #fff; }
+  label { display: block; font-size: 13px; color: var(--suave); margin-top: 10px; font-weight: 600; }
   .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .dos > * { min-width: 0; }
   input[type=date] { min-width: 0; }
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; margin-top: 8px; }
-  .stats div { background: #0f1f16; border-radius: 8px; padding: 8px 2px; }
-  .stats b { display: block; font-size: 17px; }
-  .stats span { font-size: 11px; color: #8fb39c; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  td, th { padding: 7px 5px; border-bottom: 1px solid #234a33; text-align: left; }
-  th { color: #8fb39c; font-weight: 600; font-size: 12px; }
-  .resultado { background: #12331f; border: 1px solid #2ecc71; border-radius: 12px; padding: 12px; margin-top: 10px; display: none; }
-  .aviso { background: #5a1f1f; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 10px; }
-  .vacio { color: #6d8f78; font-size: 14px; padding: 10px 0; }
-  nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; padding-bottom: env(safe-area-inset-bottom); background: #173524; border-top: 1px solid #2d5a3f; z-index: 5; }
-  nav button { flex: 1; background: none; border: 0; color: #8fb39c; padding: 7px 0 9px; font-size: 11px; min-width: 0; }
-  nav button span { display: block; font-size: 20px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; margin-top: 8px; }
+  .stats div { background: var(--tarjeta); border: 1px solid var(--linea); border-radius: 14px; padding: 10px 2px; }
+  .card .stats div { background: var(--campo); border: 0; }
+  .stats b { display: block; font-size: 18px; color: var(--texto); }
+  .stats span { font-size: 11px; color: var(--suave); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--tarjeta); border-radius: 14px; overflow: hidden; }
+  td, th { padding: 9px 7px; border-bottom: 1px solid var(--linea); text-align: left; }
+  th { color: var(--suave); font-weight: 700; font-size: 12px; background: var(--campo); }
+  .resultado { background: #ecf9f0; border: 1.5px solid #8fd3a8; border-radius: 18px; padding: 14px; margin-top: 10px; display: none; }
+  .aviso { background: #fdecea; color: #8c2219; padding: 12px; border-radius: 14px; font-size: 14px; margin-bottom: 10px; }
+  .vacio { color: #8a9a90; font-size: 14px; padding: 10px 0; }
+
+  /* Menú inferior: hoja blanca redondeada */
+  nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; padding: 8px 4px calc(6px + env(safe-area-inset-bottom)); background: #fff; border-radius: 24px 24px 0 0; box-shadow: 0 -6px 24px rgba(16,60,36,.12); z-index: 5; }
+  nav::before { content: ""; position: absolute; top: 5px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 4px; background: #dfe6e1; }
+  nav button { flex: 1; background: none; border: 0; color: #7b8a81; padding: 9px 0 4px; font-size: 11px; min-width: 0; font-weight: 600; }
+  nav button span { display: block; font-size: 21px; filter: grayscale(1) opacity(.65); }
+  nav button.activo { color: var(--acento); }
+  nav button.activo span { filter: none; transform: scale(1.12); }
+
   .chk { display: flex; align-items: center; gap: 10px; }
-  .chk input { width: 22px; height: 22px; margin: 0; flex: none; }
-  .total { font-size: 22px; font-weight: 700; color: #39ff7a; }
-  nav button.activo { color: #39ff7a; }
-  #modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: none; align-items: flex-end; justify-content: center; z-index: 20; }
+  .chk input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--g1); }
+  .total { font-size: 22px; font-weight: 800; color: var(--acento); }
+  #modal { position: fixed; inset: 0; background: rgba(10,30,18,.45); display: none; align-items: flex-end; justify-content: center; z-index: 20; }
   #modal.abierto { display: flex; }
-  #modalBody { background: #13261b; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; border-radius: 16px 16px 0 0; padding: 16px 16px 24px; }
-  #login { max-width: 380px; margin: 60px auto; padding: 20px; }
+  #modalBody { background: #fff; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; border-radius: 26px 26px 0 0; padding: 20px 16px 26px; box-shadow: 0 -10px 30px rgba(0,0,0,.15); }
+  #modalBody::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 4px; background: #dfe6e1; margin: -8px auto 12px; }
+  #login { max-width: 400px; margin: 0 auto; padding: 0 16px 20px; }
   .oculto { display: none !important; }
-  #sync { display: inline-block; margin-top: 3px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: #1e6b3d; color: #fff; }
-  #sync.off { background: #8a4b12; } #sync.sube { background: #7a6420; }
-  #avisoVersion { position: fixed; left: 12px; right: 12px; bottom: 86px; z-index: 30; background: #2e86de; color: #fff; padding: 12px 14px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
-  #avisoVersion button { background: #fff; color: #2e86de; border: 0; border-radius: 8px; padding: 8px 12px; font-weight: 700; }
-  svg text { fill: #8fb39c; font-size: 10px; }
+  #sync { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.22); color: #fff; }
+  #sync.off { background: #f39c12; } #sync.sube { background: rgba(255,214,102,.9); color: #4a3500; }
+  #rolChip { background: rgba(255,255,255,.92) !important; color: #0b5e3b !important; font-size: 10px; padding: 3px 9px; }
+  #avisoVersion { position: fixed; left: 12px; right: 12px; bottom: 96px; z-index: 30; background: #1f2d24; color: #fff; padding: 12px 14px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 8px 22px rgba(0,0,0,.25); }
+  #avisoVersion button { background: var(--grad); color: #fff; border: 0; border-radius: 999px; padding: 8px 14px; font-weight: 700; }
+  svg text { fill: #6b7c72; font-size: 10px; }
+  .trama { font-family: "Courier New", monospace; font-size: 12px; background: #0d1410; color: #d8f5e0; border: 1px solid #1d3326; border-radius: 10px; padding: 6px 8px; margin-bottom: 5px; word-break: break-all; }
+  .trama .ctl { color: #f1c40f; } .trama .hora { color: #7fa38c; font-size: 10px; }
+  .trama.ok { border-color: #2ecc71; } .trama.mal { border-color: #b03a2e; }
+  .trama b { color: #39ff7a !important; }
+  .tabs3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+
+  /* Tarjeta principal del inicio (estilo "saldo") */
+  .heroe { background: var(--tarjeta); border-radius: 22px; box-shadow: var(--sombra); overflow: hidden; margin-bottom: 14px; }
+  .heroe-top { background: var(--grad); color: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .heroe-top b { font-size: 18px; display: block; } .heroe-top small { opacity: .9; }
+  .pildora { border: 1.5px solid #fff; border-radius: 999px; padding: 4px 12px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .heroe-cuerpo { padding: 14px 16px 18px; }
+  .grande { font-size: 40px; font-weight: 600; letter-spacing: -.5px; line-height: 1.1; }
+  .grande small { font-size: 16px; font-weight: 600; margin-left: 3px; }
+  .caja { border: 1.5px solid var(--linea); border-radius: 18px; padding: 14px 14px 26px; margin-top: 14px; position: relative; }
+  .barra { height: 12px; background: #e9efeb; border-radius: 999px; overflow: hidden; margin-top: 12px; }
+  .barra div { height: 100%; background: var(--grad); border-radius: 999px; transition: width .4s; }
+  .segmento { display: flex; justify-content: center; margin: -18px auto 0; position: relative; width: max-content; background: #fff; border: 1.5px solid var(--linea); border-radius: 999px; overflow: hidden; }
+  .segmento button { border: 0; background: #fff; padding: 9px 16px; font-size: 14px; font-weight: 700; color: var(--acento); }
+  .segmento button + button { border-left: 1.5px solid var(--linea); }
+  .segmento button.on { background: var(--grad); color: #fff; }
+  .enlace { display: block; text-align: center; color: var(--acento); font-weight: 700; margin-top: 16px; font-size: 16px; background: none; border: 0; width: 100%; }
+
+  /* Pantalla de bienvenida */
+  #splash { position: fixed; inset: 0; z-index: 100; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity .5s; overflow: hidden; }
+  #splash.fuera { opacity: 0; pointer-events: none; }
+  #splash .marca { position: relative; z-index: 2; text-align: center; color: #0b5e3b; margin-top: 30vh; }
+  #splash .marca b { display: block; font-size: 24px; margin-top: 10px; }
+  #splash .ver { position: absolute; bottom: 24px; left: 0; right: 0; text-align: center; color: #b7c4bc; font-size: 13px; z-index: 2; }
 </style>
 </head>
 <body>
 
+<!-- ================= BIENVENIDA ================= -->
+<div id="splash">
+  <svg viewBox="0 0 400 700" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%">
+    <defs>
+      <linearGradient id="sg1" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8cc63f"/><stop offset=".55" stop-color="#1f9d5a"/><stop offset="1" stop-color="#0b6b45"/></linearGradient>
+      <linearGradient id="sg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d7ecdf"/><stop offset="1" stop-color="#f1f8f3"/></linearGradient>
+    </defs>
+    <path d="M40 470 C 0 380, 70 300, 170 300 S 330 330, 330 450 S 250 650, 150 640 S 70 560, 40 470 Z" fill="url(#sg2)"/>
+    <path d="M120 300 C 140 200, 260 150, 350 170 S 470 260, 450 360 S 380 520, 280 520 S 100 420, 120 300 Z" fill="url(#sg1)"/>
+    <path d="M150 315 C 168 228, 268 190, 345 205 S 445 280, 428 362 S 368 492, 285 492 S 133 400, 150 315 Z" fill="#ffffff" opacity=".18"/>
+  </svg>
+  <div class="marca"><img src="icono-192.png" width="84" height="84" style="border-radius:22px;box-shadow:0 8px 22px rgba(0,0,0,.18)" onerror="this.style.display='none'"><b>Báscula Ganadera</b></div>
+  <div class="ver" id="splashVer">v2.3</div>
+</div>
+
 <!-- ================= LOGIN ================= -->
 <div id="login" class="oculto">
-  <h2 style="text-align:center">🐄 Báscula Ganadera</h2>
+  <div style="background:var(--grad);color:#fff;margin:0 -16px 18px;padding:46px 20px 40px;border-radius:0 0 30px 30px;text-align:center">
+    <img src="icono-192.png" width="72" height="72" style="border-radius:20px;box-shadow:0 6px 18px rgba(0,0,0,.2)" onerror="this.style.display='none'">
+    <div style="font-size:24px;font-weight:700;margin-top:10px">Báscula Ganadera</div>
+    <div style="opacity:.9;font-size:14px">Pesaje y control del rebaño</div>
+  </div>
+  <h2 style="text-align:center">Iniciar sesión</h2>
   <label>Correo</label><input id="logCorreo" type="email" autocomplete="username">
   <label>Contraseña</label><input id="logClave" type="password" autocomplete="current-password">
   <button class="btn verde" id="btnLogin">Entrar</button>
-  <div class="sub" id="logError" style="margin-top:10px;color:#ff8a80"></div>
+  <div class="sub" id="logError" style="margin-top:10px;color:var(--peligro)"></div>
 </div>
 
 <!-- ================= APP ================= -->
 <div id="app" class="oculto">
-<header><b>🐄 Báscula Ganadera <small style="font-weight:400;font-size:12px;color:#8fb39c">v1.8</small><br><span id="sync">☁️ Sincronizado</span></b><span style="display:flex;gap:6px"><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></span></header>
-<div id="bannerDemo" class="oculto" style="background:#7a6420;color:#fff;font-size:13px;padding:7px 14px;text-align:center">MODO DEMO · los datos se guardan solo en este teléfono</div>
+<header>
+  <div class="hdr-top">
+    <div class="avatar" id="avatar">·</div>
+    <div class="hola">
+      <div id="saludo">Hola</div>
+      <div class="sub2"><span id="sync">☁️ Sincronizado</span><span id="rolChip" class="chip"></span></div>
+    </div>
+    <button class="campana" id="btnCampana" aria-label="Alertas">🔔<span id="campanaN" class="badge oculto"></span></button>
+  </div>
+  <div id="bannerDemo" class="oculto" style="margin-top:10px;background:rgba(255,214,102,.95);color:#4a3500;font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;text-align:center">MODO DEMO · los datos se guardan solo en este teléfono</div>
+  <div class="hdr-acc"><button id="btnUsuarios" class="oculto">👥 Usuarios</button><button id="btnReportes">📊 Excel</button><button id="btnSalir">Salir</button></div>
+</header>
 <main>
 
   <!-- ---------- PESAR ---------- -->
-  <section class="vista activa" id="v-pesar">
+  <!-- ---------- INICIO ---------- -->
+  <section class="vista activa" id="v-inicio">
+    <div class="heroe">
+      <div class="heroe-top"><div><b id="hFinca">🏡 Mi finca</b><small id="inFecha"></small></div><span class="pildora" id="hLotes">0 lotes</span></div>
+      <div class="heroe-cuerpo">
+        <div class="fila" style="align-items:flex-start">
+          <div><div style="font-size:17px">Animales activos</div><div class="grande" id="hAnimales">0</div></div>
+          <div style="text-align:right;max-width:52%">
+            <button class="btn verde" id="hPesar" style="margin:0;padding:12px 22px;font-size:18px">⚖️ Pesar +</button>
+            <div class="sub" style="margin-top:8px" id="hUltimo">Último pesaje: —</div>
+          </div>
+        </div>
+        <div class="caja">
+          <div class="fila"><span style="font-size:17px;color:var(--suave)" id="hTitulo">Peso promedio</span><span class="chip ok" id="hEstado">● Al día</span></div>
+          <div class="fila" style="align-items:flex-end;margin-top:6px">
+            <div><div class="grande" style="font-size:48px" id="hValor">—</div><div class="sub" style="font-size:15px" id="hDe"></div></div>
+            <div style="text-align:right;max-width:48%"><div class="sub" id="hLadoT">Lote más pesado</div><div style="font-weight:700;font-size:16px" id="hLadoV">—</div></div>
+          </div>
+          <div class="barra"><div id="hBarra" style="width:0%"></div></div>
+        </div>
+        <div class="segmento" id="hSeg"><button data-m="peso" class="on">⚖️ Peso</button><button data-m="gdp">📈 GDP</button><button data-m="ventas">💵 Ventas</button></div>
+        <button class="enlace" id="hDetalle">Ver animales ↗</button>
+      </div>
+    </div>
+    <h3>📋 Indicadores</h3>
+    <div class="stats" id="inKpi1"></div>
+    <div class="stats" id="inKpi2"></div>
+    <div class="sub" style="text-align:center;margin-top:18px" id="inVersion">Báscula Ganadera v2.3</div>
+    <h3>🔔 Alertas</h3>
+    <div id="inAlertas"></div>
+    <button class="btn gris oculto" id="btnAvisos">🔔 Activar avisos en el teléfono</button>
+    <h3>📊 Peso promedio por lote</h3>
+    <div class="card" id="inGrafLotes"></div>
+    <h3>📦 Distribución de pesos del rebaño</h3>
+    <div class="card" id="inGrafDist"></div>
+    <h3>💵 Ventas de los últimos 6 meses</h3>
+    <div class="card" id="inGrafVentas"></div>
+  </section>
+
+  <!-- ---------- USUARIOS Y RESPALDO (master) ---------- -->
+  <section class="vista" id="v-usuarios">
+    <h2>👥 Usuarios y respaldo</h2>
+    <div class="card">
+      <b>Crear usuario</b>
+      <label>Nombre</label><input id="usNombre">
+      <label>Correo *</label><input id="usCorreo" type="email" autocomplete="off">
+      <div class="dos">
+        <div><label>Clave temporal *</label><input id="usClave" type="text" autocomplete="off" placeholder="Mínimo 6"></div>
+        <div><label>Rol</label><select id="usRol"><option value="operador">Operador</option><option value="administrador">Administrador</option><option value="master">Master</option></select></div>
+      </div>
+      <button class="btn verde" id="usCrear">Crear usuario</button>
+      <div class="sub" style="margin-top:8px"><b style="color:var(--texto)">Operador:</b> pesa, registra animales, sanidad, reproducción y movimientos.<br>
+        <b style="color:var(--texto)">Administrador:</b> además ventas, muertes, eliminar registros, reportes e importación.<br>
+        <b style="color:var(--texto)">Master:</b> todo, más peso manual, anular ventas, usuarios, respaldo y catálogo.</div>
+    </div>
+    <h3>Usuarios</h3>
+    <div id="usLista"></div>
+
+    <h3>💾 Respaldo</h3>
+    <div class="card">
+      <div class="sub" id="rsUltimo"></div>
+      <button class="btn verde" id="rsDescargar">📥 Descargar respaldo completo</button>
+      <div class="sub" style="margin-top:6px">Guarda el archivo en Google Drive o en la computadora. Incluye todo: animales, pesadas, ventas, sanidad, movimientos, usuarios, auditoría…</div>
+      <label style="margin-top:14px">Restaurar desde un respaldo</label>
+      <select id="rsModo"><option value="faltantes">Solo agregar lo que falte (seguro)</option><option value="todo">Reemplazar con lo del respaldo (sobrescribe)</option></select>
+      <button class="btn gris" id="rsElegir">📂 Elegir archivo de respaldo</button>
+      <input type="file" id="rsArchivo" accept=".json,application/json" class="oculto">
+      <div id="rsInfo" style="margin-top:8px"></div>
+    </div>
+    <h3>🕵️ Auditoría reciente</h3>
+    <div id="usAuditoria"><div class="vacio">Toca para cargar.</div></div>
+    <button class="btn gris" id="usVerAuditoria">Cargar últimos registros de auditoría</button>
+  </section>
+
+  <section class="vista" id="v-pesar">
     <div id="avisoBT" class="aviso oculto"></div>
-    <div class="estado"><div class="punto" id="punto"></div><span id="txtEstado">Báscula desconectada</span></div>
+    <div class="fila"><div class="estado" style="margin:0"><div class="punto" id="punto"></div><span id="txtEstado">Báscula desconectada</span></div>
+      <button class="btn gris peq" id="btnIrBascula">⚙️ Báscula</button></div>
+    <div class="sub" id="txtRegla" style="margin:4px 0 10px"></div>
     <div class="visor">
       <div><span class="peso" id="peso">----</span> <span class="unidad">kg</span></div>
       <div class="estab" id="estab">—</div>
@@ -110,7 +286,7 @@
       <option value="lote">Por lote (sesión)</option>
       <option value="venta">Para venta (queda en espera)</option>
     </select>
-    <div id="avisoModoVenta" class="sub oculto" style="margin-top:6px">💵 Cada animal que peses queda <b style="color:#fff">en espera de venta</b>. Después lo agregas en Ventas → + Venta.</div>
+    <div id="avisoModoVenta" class="sub oculto" style="margin-top:6px">💵 Cada animal que peses queda <b style="color:var(--texto)">en espera de venta</b>. Después lo agregas en Ventas → + Venta.</div>
 
     <div id="panelLote" class="card oculto" style="margin-top:10px">
       <div id="sesionInactiva">
@@ -133,6 +309,10 @@
     <label>Arete del animal</label>
     <input id="arete" list="dlAretes" placeholder="Escribe o elige el arete" autocomplete="off">
     <div id="infoAnimal" class="sub" style="margin-top:6px"></div>
+    <div class="dos">
+      <button class="btn gris oculto" id="btnPesoManual">✍️ Peso manual (master)</button>
+      <button class="btn rojo oculto" id="btnCancelarManual">✕ Quitar peso manual</button>
+    </div>
     <button class="btn verde" id="btnGuardar" disabled>Guardar pesada</button>
     <div class="resultado" id="resultado"></div>
 
@@ -192,7 +372,131 @@
     <div id="ultEventos"></div>
   </section>
 
-<!-- ---------- NUEVA VENTA ---------- -->
+  <!-- ---------- BÁSCULA Y ANALIZADOR DE TRAMA ---------- -->
+  <section class="vista" id="v-bascula">
+    <button class="btn gris peq" id="baVolver">← Volver a Pesar</button>
+    <h2 style="margin-top:12px">⚙️ Báscula y analizador de trama</h2>
+
+    <div class="card">
+      <b>1. Conexión</b>
+      <label>Tipo de conexión</label>
+      <select id="baTipo">
+        <option value="ble">Bluetooth BLE (ESP32 puente o visor BLE)</option>
+        <option value="clasico">Bluetooth clásico (visor vinculado al teléfono)</option>
+        <option value="cable">Cable USB / puerto serie (computadora)</option>
+      </select>
+      <div id="baAyudaTipo" class="sub" style="margin-top:6px"></div>
+      <div id="baSerialBox" class="oculto">
+        <div class="dos">
+          <div><label>Velocidad (baudios)</label><select id="baBaud"></select></div>
+          <div><label>Formato</label><select id="baFormato"></select></div>
+        </div>
+      </div>
+      <label class="chk" style="color:var(--texto);font-size:15px;margin-top:10px"><input type="checkbox" id="baContinuo" checked> El visor transmite el peso continuamente</label>
+      <div class="sub">Si el visor solo envía al presionar IMPRIMIR, desmárcalo (se apaga el vigilante de conexión).</div>
+      <div class="dos" style="margin-top:6px">
+        <button class="btn" id="baConectar">Conectar</button>
+        <button class="btn gris" id="baDesconectar">Desconectar</button>
+      </div>
+      <div class="estado" style="margin-top:10px"><div class="punto" id="baPunto"></div><span id="baEstado">Desconectada</span></div>
+      <div class="sub" id="baPerfil"></div>
+      <div class="visor" style="margin-top:8px;padding:10px"><span class="peso" id="baPeso" style="font-size:42px">----</span> <span class="unidad">kg</span>
+        <div class="estab" id="baEstab">—</div></div>
+    </div>
+
+    <div class="card oculto" id="baEspBox">
+      <b>🔧 ESP32 puente: parámetros RS-232</b>
+      <div class="sub" id="baEspInfo" style="margin-top:4px"></div>
+      <div class="dos">
+        <div><label>Velocidad</label><select id="espBaud"></select></div>
+        <div><label>Bits de datos</label><select id="espBits"><option>8</option><option>7</option></select></div>
+      </div>
+      <div class="dos">
+        <div><label>Paridad</label><select id="espPar"><option value="N">Ninguna (N)</option><option value="E">Par (E)</option><option value="O">Impar (O)</option></select></div>
+        <div><label>Bits de parada</label><select id="espStop"><option>1</option><option>2</option></select></div>
+      </div>
+      <label class="chk" style="color:var(--texto);font-size:15px;margin-top:10px"><input type="checkbox" id="espInv"> Señal invertida (algunos visores sin MAX3232)</label>
+      <label>Simulador de visor (para pruebas sin báscula)</label>
+      <select id="espSim"><option value="0">Apagado: leer el visor real</option><option value="1">Formato ST,GS,+0000452.0kg</option><option value="2">Formato tipo Toledo (STX…CR, cifras pegadas)</option><option value="3">Sin fin de línea, separado por pausas</option><option value="4">Dígitos invertidos (=00.2540)</option></select>
+      <button class="btn verde" id="espAplicar">Enviar al ESP32 y guardar</button>
+    </div>
+
+    <div class="card">
+      <div class="fila"><b>2. Analizador de tramas</b><span class="sub" id="anCuenta"></span></div>
+      <div class="dos">
+        <div><label>Separar tramas por</label><select id="anSep">
+          <option value="auto">Automático</option><option value="crlf">Fin de línea (CR / LF)</option><option value="etx">ETX (fin de texto, 0x03)</option>
+          <option value="stx">STX (inicio de texto, 0x02)</option><option value="pausa">Pausa entre datos</option><option value="largo">Largo fijo</option></select></div>
+        <div id="anLargoBox" class="oculto"><label>Largo (bytes)</label><input id="anLargo" type="number" inputmode="numeric" value="18"></div>
+      </div>
+      <div class="sub" id="anSepDet" style="margin-top:4px"></div>
+      <div class="tabs3" style="margin-top:8px">
+        <button class="btn gris peq" id="anCongelar">⏸ Congelar</button>
+        <button class="btn gris peq" id="anVista">Ver HEX</button>
+        <button class="btn gris peq" id="anLimpiar">🧹 Limpiar</button>
+      </div>
+      <div id="anTramas" style="margin-top:8px;max-height:42vh;overflow-y:auto"></div>
+    </div>
+
+    <div class="card">
+      <b>3. Regla de lectura</b>
+      <div class="sub" style="margin-top:4px">Le dice a la app dónde está el peso dentro de la trama.</div>
+      <div class="dos" style="margin-top:8px">
+        <button class="btn" id="rgAuto">🔍 Detectar automático</button>
+        <button class="btn gris" id="rgLimpiar">Regla genérica</button>
+      </div>
+      <div class="card" style="margin-top:10px;background:var(--campo)">
+        <b>🎯 Aprender con peso conocido</b>
+        <div class="sub">Pon en la báscula algo de peso conocido, espera que se estabilice y escribe cuánto pesa.</div>
+        <div class="dos">
+          <div><label>Peso conocido</label><input id="rgConocido" type="number" inputmode="decimal"></div>
+          <div><label>Unidad del visor</label><select id="rgConUnidad"><option value="kg">kg</option><option value="lb">lb</option><option value="g">g</option><option value="t">t</option></select></div>
+        </div>
+        <button class="btn verde" id="rgAprender">Analizar tramas</button>
+      </div>
+      <div class="dos">
+        <div><label>Modo</label><select id="rgModo"><option value="token">Número n° (separado)</option><option value="posicion">Posición fija</option></select></div>
+        <div id="rgTokenBox"><label>Número n°</label><input id="rgToken" type="number" inputmode="numeric" value="1" min="1"></div>
+      </div>
+      <div class="dos oculto" id="rgPosBox">
+        <div><label>Desde el carácter</label><input id="rgIni" type="number" inputmode="numeric" value="1" min="1"></div>
+        <div><label>Cantidad de caracteres</label><input id="rgLargo" type="number" inputmode="numeric" value="6"></div>
+      </div>
+      <div class="dos">
+        <div><label>Decimales</label><select id="rgDec"><option value="-1">Como vienen en la trama</option><option value="0">0 (entero)</option><option value="1">1 implícito</option><option value="2">2 implícitos</option><option value="3">3 implícitos</option></select></div>
+        <div><label>Unidad del visor</label><select id="rgUnidad"><option value="kg">kg</option><option value="lb">lb → kg</option><option value="g">g → kg</option><option value="t">t → kg</option></select></div>
+      </div>
+      <label class="chk" style="color:var(--texto);font-size:15px;margin-top:10px"><input type="checkbox" id="rgInv"> Dígitos invertidos (el visor los manda al revés)</label>
+      <label>Indicador de estabilidad del visor</label>
+      <select id="rgEstModo"><option value="ninguno">El visor no lo envía (la app lo calcula)</option><option value="texto">Texto en la trama</option></select>
+      <div class="dos oculto" id="rgEstBox">
+        <div><label>Texto si está ESTABLE</label><input id="rgEstSi" placeholder="Ej: ST"></div>
+        <div><label>Texto si está MOVIÉNDOSE</label><input id="rgEstNo" placeholder="Ej: US"></div>
+      </div>
+      <div id="rgPrueba" style="margin-top:10px"></div>
+      <button class="btn verde" id="rgUsar">✔ Usar esta regla en este teléfono</button>
+    </div>
+
+    <div class="card">
+      <div class="fila"><b>4. Catálogo de reglas</b><span class="sub" id="ctCuenta"></span></div>
+      <div class="sub" style="margin-top:4px">Reglas guardadas por marca y modelo, disponibles en todos los teléfonos.</div>
+      <div class="dos">
+        <div><label>Marca</label><input id="ctMarca" placeholder="Ej: Toledo"></div>
+        <div><label>Modelo</label><input id="ctModelo" placeholder="Ej: 9091"></div>
+      </div>
+      <label>Notas</label><input id="ctNotas" placeholder="Ej: salida continua, 9600 8N1">
+      <button class="btn" id="ctGuardar">💾 Guardar la regla actual en el catálogo</button>
+      <input id="ctBuscar" placeholder="Buscar marca o modelo" style="margin-top:12px">
+      <div id="ctLista" style="margin-top:8px"></div>
+      <div class="dos" style="margin-top:8px">
+        <button class="btn gris peq" id="ctExportar">📤 Exportar</button>
+        <button class="btn gris peq" id="ctImportarBtn">📥 Importar</button>
+      </div>
+      <input type="file" id="ctImportar" accept=".json,application/json" class="oculto">
+    </div>
+  </section>
+
+  <!-- ---------- NUEVA VENTA ---------- -->
   <section class="vista" id="v-nventa">
     <button class="btn gris peq" id="nvVolver">← Volver a Ventas</button>
     <h2 style="margin-top:12px">💵 Nueva venta</h2>
@@ -227,7 +531,7 @@
 
     <div class="card">
       <b>2. Agregar animales</b>
-      <div class="sub" style="margin-top:4px">La báscula se usa en <b style="color:#fff">Pesar → modo "Para venta"</b>. Aquí solo se agregan.</div>
+      <div class="sub" style="margin-top:4px">La báscula se usa en <b style="color:var(--texto)">Pesar → modo "Para venta"</b>. Aquí solo se agregan.</div>
 
       <h3 style="margin-top:12px">💵 Pesados en espera de venta</h3>
       <div id="nvEspera"></div>
@@ -278,8 +582,12 @@
         <div class="fila"><b>Peso de la báscula</b><button class="btn peq" id="cConectar">Conectar</button></div>
         <div class="visor" style="margin-top:8px;padding:10px"><span class="peso" id="cPeso" style="font-size:44px">----</span> <span class="unidad">kg</span>
           <div class="estab" id="cEstab">—</div></div>
-        <label class="chk" style="color:#e8f0ea;font-size:15px;margin-top:10px"><input type="checkbox" id="cUsarBascula" checked> Usar el peso de la báscula</label>
-        <div id="cPesoManualBox" class="oculto"><label>Peso manual (kg)</label><input id="cPesoManual" type="number" inputmode="decimal"></div>
+        <label class="chk" style="color:var(--texto);font-size:15px;margin-top:10px"><input type="checkbox" id="cUsarBascula" checked> Usar el peso de la báscula</label>
+        <div id="cPesoManualBox" class="oculto">
+          <div class="sub" id="cManualAutoriza" style="margin-top:6px"></div>
+          <label>Peso manual (kg)</label><input id="cPesoManual" type="number" inputmode="decimal">
+          <label>Motivo del peso manual *</label><input id="cMotivoManual" value="Carga inicial sin báscula">
+        </div>
       </div>
       <div class="card">
         <div class="dos">
@@ -386,7 +694,8 @@
 </main>
 
 <nav>
-  <button data-v="pesar" class="activo"><span>⚖️</span>Pesar</button>
+  <button data-v="inicio" class="activo"><span>🏠</span>Inicio</button>
+  <button data-v="pesar"><span>⚖️</span>Pesar</button>
   <button data-v="animales"><span>🐄</span>Animales</button>
   <button data-v="lotes"><span>📋</span>Lotes</button>
   <button data-v="repro"><span>🧬</span>Reprod.</button>
@@ -407,8 +716,8 @@
     if (document.getElementById("fallo")) return;
     const d = document.createElement("div");
     d.id = "fallo";
-    d.style.cssText = "position:fixed;inset:0;z-index:99;background:#0f1a14;color:#e8f0ea;padding:30px 20px;font-family:system-ui;text-align:center";
-    d.innerHTML = "<h2>🐄 Báscula Ganadera</h2><p>La app no pudo iniciar.</p><p style='color:#ff8a80;font-size:14px;word-break:break-word'></p>" +
+    d.style.cssText = "position:fixed;inset:0;z-index:120;background:#f3f6f4;color:#1d2b23;padding:30px 20px;font-family:system-ui;text-align:center";
+    d.innerHTML = "<h2>🐄 Báscula Ganadera</h2><p>La app no pudo iniciar.</p><p style='color:var(--peligro);font-size:14px;word-break:break-word'></p>" +
       "<button onclick='location.reload()' style='padding:12px 20px;font-size:16px;border:0;border-radius:10px;background:#2e86de;color:#fff'>Reintentar</button>";
     d.querySelector("p:nth-of-type(2)").textContent = msg;
     document.body.appendChild(d);
@@ -443,6 +752,8 @@ const USAR_LOGIN = true;
 
 let esperarPendientes = null;
 let getDocsFromCache, getDocsFromServer, serverTimestamp, Timestamp;
+let reautenticar = null;   // verifica la contraseña del usuario conectado (peso manual)
+let crearCuenta = null, restablecerClave = null;
 let db, auth, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs,
     signInWithEmailAndPassword, onAuthStateChanged, signOut;
 
@@ -453,7 +764,7 @@ if (!DEMO) {
     fa = await import(V + "firebase-app.js");
     fs = await import(V + "firebase-firestore.js");
   } catch (e) {
-    document.body.innerHTML = `<div style="padding:30px 20px;text-align:center;font-family:system-ui;color:#e8f0ea">
+    document.body.innerHTML = `<div style="padding:30px 20px;text-align:center;font-family:system-ui;color:var(--texto)">
       <h2>🐄 Báscula Ganadera</h2>
       <p>No se pudo cargar Firebase.</p>
       <p style="color:#8fb39c;font-size:14px">Revisa la conexión a internet la primera vez y abre la app en <b>Google Chrome</b>
@@ -466,6 +777,14 @@ if (!DEMO) {
     const fu = await import(V + "firebase-auth.js");
     auth = fu.getAuth(app);
     ({ signInWithEmailAndPassword, onAuthStateChanged, signOut } = fu);
+    reautenticar = clave => fu.reauthenticateWithCredential(auth.currentUser, fu.EmailAuthProvider.credential(auth.currentUser.email, clave));
+    // Crear la cuenta de otro usuario sin cerrar la sesión del master (instancia secundaria de Firebase)
+    crearCuenta = async (email, clave) => {
+      const app2 = fa.initializeApp(firebaseConfig, "secundaria-" + Date.now());
+      const a2 = fu.getAuth(app2);
+      try { await fu.createUserWithEmailAndPassword(a2, email, clave); } finally { try { await fu.signOut(a2); } catch (_) {} }
+    };
+    restablecerClave = email => fu.sendPasswordResetEmail(auth, email);
   } else {
     // Sin login (temporal): entra directo
     auth = {};
@@ -581,9 +900,9 @@ let desuscribir = [];
 //  descarga lo que cambió desde la última vez. Cada escritura lleva la hora
 //  del servidor ("actualizado") y los borrados son lógicos ("borrado").
 // ======================================================================
-const SINC = ["animales", "lotes", "potreros", "reproduccion", "sanidad", "ventas", "movimientos"];
-const mapRepro = new Map(), mapSanidad = new Map(), mapVentas = new Map(), mapMovs = new Map();
-const tienda = c => ({ animales, lotes, potreros, reproduccion: mapRepro, sanidad: mapSanidad, ventas: mapVentas, movimientos: mapMovs })[c];
+const SINC = ["animales", "lotes", "potreros", "reproduccion", "sanidad", "ventas", "movimientos", "reglas_trama", "usuarios"];
+const mapRepro = new Map(), mapSanidad = new Map(), mapVentas = new Map(), mapMovs = new Map(), mapReglas = new Map(), mapUsuarios = new Map();
+const tienda = c => ({ animales, lotes, potreros, reproduccion: mapRepro, sanidad: mapSanidad, ventas: mapVentas, movimientos: mapMovs, reglas_trama: mapReglas, usuarios: mapUsuarios })[c];
 function regenerar() { repro = [...mapRepro.values()]; sanidad = [...mapSanidad.values()]; ventas = [...mapVentas.values()]; movimientos = [...mapMovs.values()]; }
 function aplicar(col, id, data) { const m = tienda(col); if (!data || data.borrado) m.delete(id); else m.set(id, { id, ...data }); }
 let refrescoPend = false;
@@ -674,7 +993,7 @@ const buscarArete = a => {
 // ======================================================================
 $("btnLogin").onclick = async () => {
   $("logError").textContent = "";
-  try { await signInWithEmailAndPassword(auth, $("logCorreo").value.trim(), $("logClave").value); }
+  try { await signInWithEmailAndPassword(auth, $("logCorreo").value.trim(), $("logClave").value); guardarHuella($("logCorreo").value.trim(), $("logClave").value); }
   catch (e) { $("logError").textContent = navigator.onLine ? "No se pudo entrar: revisa el correo y la contraseña." : "Sin internet: la primera vez que entras en este teléfono necesitas conexión. Después funciona sin señal."; }
 };
 $("btnSalir").onclick = () => { if (DEMO) signOut(auth); else if (confirm("¿Cerrar sesión?")) signOut(auth); };
@@ -686,11 +1005,14 @@ if (DEMO) {
 
 onAuthStateChanged(auth, u => {
   window.__arrancado = true;
+  ocultarBienvenida();
   desuscribir.forEach(f => f()); desuscribir = [];
   if (!u) { $("app").classList.add("oculto"); $("login").classList.remove("oculto"); return; }
   usuario = u.email;
+  pintarSaludo();
   $("login").classList.add("oculto"); $("app").classList.remove("oculto");
   escuchar();
+  cargarRoles();
 });
 
 function escuchar() {
@@ -722,6 +1044,10 @@ function refrescar() {
   if (v === "v-sanidad") renderSanidad();
   if (v === "v-ventas") renderVentas();
   if (v === "v-detalle" && detalleId) renderDetalle(detalleId, false);
+  if (v === "v-bascula") renderCatalogo();
+  if (v === "v-inicio") renderInicio();
+  if (v === "v-usuarios") renderUsuarios();
+  aplicarRol();
 }
 
 function opcionesLote(sel, conVacio = true) {
@@ -741,7 +1067,7 @@ let detalleId = null;
 function ir(v) {
   document.querySelectorAll(".vista").forEach(s => s.classList.remove("activa"));
   $("v-" + v).classList.add("activa");
-  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("activo", b.dataset.v === v || ((v === "detalle" || v === "carga") && b.dataset.v === "animales") || (v === "nventa" && b.dataset.v === "ventas")));
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("activo", b.dataset.v === v || ((v === "detalle" || v === "carga") && b.dataset.v === "animales") || (v === "bascula" && b.dataset.v === "pesar") || (v === "nventa" && b.dataset.v === "ventas")));
   if (v === "animales") renderAnimales();
   if (v === "lotes") renderLotes();
   if (v === "repro") renderRepro();
@@ -750,6 +1076,9 @@ function ir(v) {
   if (v === "reportes") prepararReportes();
   if (v === "carga") prepararCarga();
   if (v === "nventa") prepararNuevaVenta();
+  if (v === "bascula") prepararBascula();
+  if (v === "inicio") renderInicio();
+  if (v === "usuarios") renderUsuarios();
   window.scrollTo(0, 0);
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => ir(b.dataset.v));
@@ -759,99 +1088,608 @@ function cerrarModal() { $("modal").classList.remove("abierto"); $("modalBody").
 $("modal").onclick = e => { if (e.target.id === "modal") cerrarModal(); };
 
 // ======================================================================
-//  BÁSCULA BLUETOOTH (BLE)
+//  BÁSCULA: CONEXIÓN UNIVERSAL + ANALIZADOR DE TRAMA
+//  · Bluetooth BLE: ESP32 puente (Nordic UART), módulos HM-10/JDY/CC2541 (FFE0),
+//    Microchip Transparent UART, módulos genéricos FFF0 y báscula estándar BLE (0x181D).
+//  · Bluetooth clásico (SPP) y cable: Web Serial (el visor debe estar vinculado).
+//  Todo lo que llega se separa en tramas, se guarda en el analizador y se lee con la regla activa.
 // ======================================================================
-const SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-const CHAR_TX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
-let dispositivo = null, caracActual = null, desconexionManual = false;
 let pesoActual = null, estable = false, ultimas = [];
 
-if (!navigator.bluetooth) {
+const BLE_PERFILES = [
+  { nombre: "ESP32 puente (Nordic UART)", svc: "6e400001-b5a3-f393-e0a9-e50e24dcca9e", rx: "6e400003-b5a3-f393-e0a9-e50e24dcca9e", tx: "6e400002-b5a3-f393-e0a9-e50e24dcca9e" },
+  { nombre: "Módulo HM-10 / JDY / CC2541 (FFE0)", svc: 0xffe0, rx: 0xffe1, tx: 0xffe1 },
+  { nombre: "Microchip Transparent UART", svc: "49535343-fe7d-4ae5-8fa9-9fafd205e455", rx: "49535343-1e4d-4bd9-ba61-23c647249616", tx: "49535343-8841-43f4-a8d4-ecbe34729bb3" },
+  { nombre: "Módulo serie genérico (FFF0)", svc: 0xfff0, rx: null, tx: null },
+  { nombre: "Báscula estándar BLE (Weight Scale)", svc: 0x181d, rx: 0x2a9d, tx: null, binario: true }
+];
+const SPP_UUID = "00001101-0000-1000-8000-00805f9b34fb";
+const BAUDIOS = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200];
+const FORMATOS = ["8N1", "8E1", "8O1", "7E1", "7O1", "7N1", "8N2"];
+const KG_POR = { kg: 1, lb: 0.45359237, g: 0.001, t: 1000 };
+
+// Configuración de la báscula en este teléfono
+const CONF_K = "bascula_conf", REGLA_K = "bascula_regla";
+const leerJSON = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch (_) { return d; } };
+let conf = leerJSON(CONF_K, { tipo: "ble", baud: 9600, formato: "8N1", continuo: true });
+const REGLA_GENERICA = { modo: "token", token: 1, inicio: 1, largo: 6, decimales: -1, invertido: false, unidad: "kg", estable: { modo: "ninguno", si: "", no: "" }, separador: "auto", largoFijo: 18, nombre: "Genérica" };
+let regla = { ...REGLA_GENERICA, ...leerJSON(REGLA_K, {}) };
+const guardarConf = () => { try { localStorage.setItem(CONF_K, JSON.stringify(conf)); } catch (_) {} };
+
+if (!navigator.bluetooth && !navigator.serial) {
   $("avisoBT").classList.remove("oculto");
-  $("avisoBT").textContent = "Este navegador no permite Bluetooth. Usa Google Chrome en Android.";
-  $("btnCon").disabled = true;
+  $("avisoBT").textContent = "Este navegador no permite conectar la báscula. Usa Google Chrome en Android (o en la computadora).";
 }
 
 function conTiempo(p, ms) { return Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error("tiempo agotado")), ms))]); }
 
-async function conectarGatt(max) {
+// ---------------- Estado de conexión ----------------
+let conn = null;               // { tipo, nombre, perfil, escribir(texto), cerrar() }
+let bleDev = null, serialPort = null, lectorSerial = null, salirManual = false;
+let ultimoByte = 0, reintentos = 0, reconectando = false;
+
+function pintarEstado(txt, ok) {
+  $("txtEstado").textContent = txt; $("baEstado").textContent = txt;
+  $("punto").classList.toggle("ok", !!ok); $("baPunto").classList.toggle("ok", !!ok);
+  $("btnCon").classList.toggle("oculto", !!ok); $("btnDes").classList.toggle("oculto", !ok);
+  $("btnRec").classList.toggle("oculto", ok || !(bleDev || serialPort));
+  $("baPerfil").textContent = conn ? `${conn.nombre} · ${conn.perfil}` : "";
+  $("txtRegla").textContent = "Regla de lectura: " + (regla.nombre || "Genérica") + (regla.marca ? ` (${regla.marca} ${regla.modelo || ""})` : "");
+}
+
+function limpiarPeso() {
+  pesoActual = null; estable = false; ultimas = [];
+  ["peso", "cPeso", "baPeso"].forEach(id => $(id).textContent = "----");
+  ["estab", "cEstab", "baEstab"].forEach(id => { $(id).textContent = "—"; $(id).classList.remove("si"); });
+  actualizarBotonGuardar();
+}
+
+// ---------------- Conectar ----------------
+$("btnCon").onclick = () => conectar(true);
+$("btnRec").onclick = () => conectar(false);
+$("btnDes").onclick = () => desconectar();
+$("btnIrBascula").onclick = () => ir("bascula");
+
+async function conectar(elegir) {
+  salirManual = false; reintentos = 0;
+  try {
+    if (conf.tipo === "ble") await conectarBLE(elegir);
+    else await conectarSerial(elegir);
+  } catch (e) {
+    if (e && e.name === "NotFoundError") pintarEstado("No se eligió ningún dispositivo", false);
+    else pintarEstado("No se conectó: " + (e?.message || e), false);
+  }
+}
+
+async function desconectar() {
+  salirManual = true;
+  try { if (bleDev?.gatt?.connected) bleDev.gatt.disconnect(); } catch (_) {}
+  try { if (lectorSerial) await lectorSerial.cancel(); } catch (_) {}
+  try { if (serialPort) await serialPort.close(); } catch (_) {}
+  conn = null; limpiarPeso(); pintarEstado("Báscula desconectada", false);
+}
+
+// ---- Bluetooth BLE ----
+async function conectarBLE(elegir) {
+  if (!navigator.bluetooth) throw new Error("este navegador no tiene Bluetooth BLE");
+  if (elegir || !bleDev) {
+    pintarEstado("Buscando dispositivos...", false);
+    const d = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: BLE_PERFILES.map(p => p.svc) });
+    if (bleDev) bleDev.removeEventListener("gattserverdisconnected", alCaerBLE);
+    bleDev = d; bleDev.addEventListener("gattserverdisconnected", alCaerBLE);
+  }
   let ultimoError = null;
-  for (let i = 1; i <= max; i++) {
+  for (let i = 1; i <= 5; i++) {
     try {
-      $("txtEstado").textContent = `Conectando... intento ${i} de ${max}`;
-      if (dispositivo.gatt.connected) dispositivo.gatt.disconnect();
+      pintarEstado(`Conectando... intento ${i} de 5`, false);
+      if (bleDev.gatt.connected) bleDev.gatt.disconnect();
       await esperar(300);
-      const srv = await conTiempo(dispositivo.gatt.connect(), 8000);
+      const srv = await conTiempo(bleDev.gatt.connect(), 8000);
       await esperar(600);
-      const servicio = await conTiempo(srv.getPrimaryService(SERVICE_UUID), 5000);
-      const carac = await conTiempo(servicio.getCharacteristic(CHAR_TX_UUID), 5000);
-      if (caracActual) caracActual.removeEventListener("characteristicvaluechanged", alRecibir);
-      carac.addEventListener("characteristicvaluechanged", alRecibir);
-      await conTiempo(carac.startNotifications(), 5000);
-      caracActual = carac;
-      $("punto").classList.add("ok");
-      $("txtEstado").textContent = "Conectado a " + (dispositivo.name || "báscula");
-      $("btnCon").classList.add("oculto"); $("btnRec").classList.add("oculto"); $("btnDes").classList.remove("oculto");
-      return true;
+      for (const p of BLE_PERFILES) {
+        let svc;
+        try { svc = await conTiempo(srv.getPrimaryService(p.svc), 3000); } catch (_) { continue; }
+        const chars = await svc.getCharacteristics();
+        const uid = x => typeof x === "number" ? BluetoothUUID.getCharacteristic(x) : x;
+        let rx = p.rx ? chars.find(c => c.uuid === uid(p.rx)) : null;
+        if (!rx) rx = chars.find(c => c.properties.notify || c.properties.indicate);
+        if (!rx) continue;
+        let tx = p.tx ? chars.find(c => c.uuid === uid(p.tx)) : null;
+        if (!tx) tx = chars.find(c => c.properties.write || c.properties.writeWithoutResponse);
+        rx.addEventListener("characteristicvaluechanged", ev => {
+          const v = ev.target.value;
+          if (p.binario) recibirWeightScale(v); else recibirBytes(new Uint8Array(v.buffer, v.byteOffset, v.byteLength));
+        });
+        await conTiempo(rx.startNotifications(), 5000);
+        conn = {
+          tipo: "ble", nombre: bleDev.name || "Dispositivo BLE", perfil: p.nombre, binario: !!p.binario,
+          escribir: async t => { if (!tx) throw new Error("el dispositivo no acepta comandos"); const b = new TextEncoder().encode(t);
+            for (let k = 0; k < b.length; k += 20) { const part = b.slice(k, k + 20); if (tx.properties.writeWithoutResponse) await tx.writeValueWithoutResponse(part); else await tx.writeValue(part); } }
+        };
+        ultimoByte = Date.now(); reintentos = 0;
+        pintarEstado("Conectado a " + conn.nombre, true);
+        if (p.svc === BLE_PERFILES[0].svc) setTimeout(() => conn?.escribir("INFO?\n").catch(() => {}), 800);
+        return;
+      }
+      throw new Error("no se encontró un servicio de datos conocido en este dispositivo");
     } catch (e) {
       ultimoError = e;
-      try { dispositivo.gatt.disconnect(); } catch (_) {}
+      try { bleDev.gatt.disconnect(); } catch (_) {}
+      if (/servicio de datos/.test(e.message)) break;
       await esperar(1000 + i * 500);
     }
   }
-  $("txtEstado").textContent = "No se conectó: " + (ultimoError ? ultimoError.message : "sin respuesta");
-  $("btnRec").classList.remove("oculto"); $("btnCon").classList.remove("oculto");
-  return false;
+  throw ultimoError || new Error("sin respuesta");
 }
-
-$("btnCon").onclick = async () => {
-  try {
-    $("txtEstado").textContent = "Buscando dispositivos...";
-    const elegido = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [SERVICE_UUID] });
-    if (dispositivo) dispositivo.removeEventListener("gattserverdisconnected", alDesconectar);
-    dispositivo = elegido;
-    dispositivo.addEventListener("gattserverdisconnected", alDesconectar);
-    desconexionManual = false;
-    await conectarGatt(5);
-  } catch (e) { $("txtEstado").textContent = "No se conectó: " + e.message; }
-};
-$("btnRec").onclick = async () => { if (!dispositivo) return; desconexionManual = false; $("btnRec").classList.add("oculto"); await conectarGatt(5); };
-$("btnDes").onclick = () => { desconexionManual = true; if (dispositivo?.gatt.connected) dispositivo.gatt.disconnect(); };
-
-async function alDesconectar() {
-  $("punto").classList.remove("ok"); $("btnDes").classList.add("oculto");
-  pesoActual = null; estable = false; ultimas = [];
-  $("peso").textContent = "----"; $("estab").textContent = "—"; $("estab").classList.remove("si");
-  $("cPeso").textContent = "----"; $("cEstab").textContent = "—"; $("cEstab").classList.remove("si");
-
-  actualizarBotonGuardar();
-  if (desconexionManual) {
-    $("txtEstado").textContent = "Báscula desconectada";
-    $("btnCon").classList.remove("oculto"); $("btnRec").classList.remove("oculto");
-    return;
-  }
-  $("txtEstado").textContent = "Se perdió la conexión, reconectando...";
+async function alCaerBLE() {
+  if (conn?.tipo !== "ble") return;
+  conn = null; limpiarPeso();
+  if (salirManual) return pintarEstado("Báscula desconectada", false);
+  pintarEstado("Se perdió la conexión, reconectando...", false);
   await esperar(1500);
-  await conectarGatt(5);
+  try { await conectarBLE(false); } catch (e) { pintarEstado("No se pudo reconectar: " + e.message, false); }
 }
 
-function alRecibir(ev) {
-  const texto = new TextDecoder().decode(ev.target.value);
-  const m = texto.match(/-?\d+(\.\d+)?/);
-  if (!m) return;
-  const p = parseFloat(m[0]);
+// ---- Bluetooth clásico (SPP) y cable: Web Serial ----
+async function conectarSerial(elegir) {
+  if (!navigator.serial) throw new Error(conf.tipo === "clasico" ? "este Chrome no tiene Bluetooth clásico (actualiza Chrome)" : "este navegador no tiene puerto serie");
+  if (elegir || !serialPort) {
+    const previos = !elegir ? await navigator.serial.getPorts() : [];
+    if (previos.length) serialPort = previos[0];
+    else {
+      pintarEstado("Elige el dispositivo...", false);
+      serialPort = conf.tipo === "clasico"
+        ? await navigator.serial.requestPort({ allowedBluetoothServiceClassIds: [SPP_UUID], filters: [{ bluetoothServiceClassId: SPP_UUID }] })
+        : await navigator.serial.requestPort();
+    }
+  }
+  const f = conf.formato || "8N1";
+  pintarEstado("Abriendo puerto...", false);
+  try { await serialPort.close(); } catch (_) {}
+  await serialPort.open({ baudRate: Number(conf.baud) || 9600, dataBits: Number(f[0]), parity: { N: "none", E: "even", O: "odd" }[f[1]], stopBits: Number(f[2]) });
+  const info = serialPort.getInfo ? serialPort.getInfo() : {};
+  conn = {
+    tipo: conf.tipo, nombre: conf.tipo === "clasico" ? "Bluetooth clásico" : "Puerto serie" + (info.usbVendorId ? " USB" : ""),
+    perfil: `${conf.baud} ${f}`,
+    escribir: async t => { const w = serialPort.writable.getWriter(); try { await w.write(new TextEncoder().encode(t)); } finally { w.releaseLock(); } }
+  };
+  ultimoByte = Date.now(); reintentos = 0;
+  pintarEstado("Conectado: " + conn.nombre, true);
+  leerSerial();
+}
+async function leerSerial() {
+  const puerto = serialPort;
+  while (puerto && puerto.readable && conn && serialPort === puerto) {
+    lectorSerial = puerto.readable.getReader();
+    try {
+      for (;;) { const { value, done } = await lectorSerial.read(); if (done) break; if (value) recibirBytes(value); }
+    } catch (e) { console.warn("serie:", e); break; }
+    finally { try { lectorSerial.releaseLock(); } catch (_) {} }
+  }
+  if (serialPort === puerto && conn && !salirManual) {
+    conn = null; limpiarPeso(); pintarEstado("Se perdió la conexión", false);
+  }
+}
+if (navigator.serial) navigator.serial.addEventListener?.("disconnect", e => { if (e.target === serialPort && !salirManual) { conn = null; limpiarPeso(); pintarEstado("El dispositivo se desconectó", false); } });
+
+// ---------------- Vigilante: 5 s sin datos → hasta 3 reintentos ----------------
+setInterval(async () => {
+  if (!conn || reconectando || !conf.continuo || conn.binario) return;
+  if (Date.now() - ultimoByte < 5000) return;
+  if (reintentos >= 3) { pintarEstado("⚠ La báscula no envía datos. Revisa el visor o el cable.", true); return; }
+  reconectando = true; reintentos++;
+  pintarEstado(`Sin datos hace 5 s · reintento ${reintentos} de 3...`, true);
+  try {
+    if (conn.tipo === "ble") { try { bleDev.gatt.disconnect(); } catch (_) {} await esperar(800); await conectarBLE(false); }
+    else { conn = null; await conectarSerial(false); }
+    ultimoByte = Date.now();
+  } catch (e) { pintarEstado("Reintento fallido: " + e.message, false); }
+  reconectando = false;
+}, 1000);
+
+// ======================================================================
+//  SEPARADOR DE TRAMAS
+// ======================================================================
+let acum = [], timerPausa = null, sepDetectado = null, espBuf = null;
+const MAX_TRAMA = 256;
+
+function recibirBytes(u8) {
+  ultimoByte = Date.now();
+  if (reintentos && conn) { reintentos = 0; pintarEstado("Conectado a " + conn.nombre, true); }
+  for (const b of u8) {
+    // Respuestas del ESP32 puente: van entre 0x1E y 0x1F y no son tramas del visor
+    if (b === 0x1E) { espBuf = []; continue; }
+    if (espBuf) { if (b === 0x1F) { respuestaESP(String.fromCharCode(...espBuf)); espBuf = null; } else espBuf.push(b); continue; }
+    acum.push(b);
+    const modo = modoSeparador();
+    if ((modo === "crlf" && (b === 0x0D || b === 0x0A)) || (modo === "etx" && b === 0x03)) cerrarTrama();
+    else if (modo === "stx" && b === 0x02 && acum.length > 1) { acum.pop(); cerrarTrama(); acum.push(0x02); }
+    else if (modo === "largo" && acum.length >= (Number(regla.largoFijo) || 18)) cerrarTrama();
+    else if (acum.length >= MAX_TRAMA) cerrarTrama();
+  }
+  clearTimeout(timerPausa);
+  timerPausa = setTimeout(() => { if (acum.length) { if (regla.separador === "auto" && !sepDetectado) sepDetectado = "pausa"; if (["pausa", "auto"].includes(modoSeparador())) cerrarTrama(); } }, 120);
+}
+function modoSeparador() {
+  if (regla.separador !== "auto") return regla.separador;
+  if (sepDetectado) return sepDetectado;
+  if (acum.includes(0x0D) || acum.includes(0x0A)) sepDetectado = "crlf";
+  else if (acum.includes(0x03)) sepDetectado = "etx";
+  else if (acum.length > 1 && acum.slice(1).includes(0x02)) sepDetectado = "stx";
+  return sepDetectado || "auto";
+}
+function cerrarTrama() {
+  const t = acum; acum = [];
+  const limpio = t.filter(b => b !== 0x0D && b !== 0x0A);
+  if (limpio.length) procesarTrama(new Uint8Array(t));
+}
+
+// Báscula estándar BLE: medida binaria (flags + peso uint16)
+function recibirWeightScale(dv) {
+  ultimoByte = Date.now();
+  const flags = dv.getUint8(0), raw = dv.getUint16(1, true);
+  if (raw === 0xFFFF) return;
+  const kg = flags & 1 ? raw * 0.01 * KG_POR.lb : raw * 0.005;
+  const txt = `WS ${kg.toFixed(3)} kg`;
+  guardarEnBuffer(new TextEncoder().encode(txt));
+  alPeso(kg, true);
+}
+
+// ======================================================================
+//  BUFFER DEL ANALIZADOR
+// ======================================================================
+let buffer = [], congelado = false, vistaHex = false, timerAn = null;
+function guardarEnBuffer(bytes) {
+  if (congelado) return;
+  buffer.push({ t: Date.now(), b: bytes });
+  if (buffer.length > 60) buffer.shift();
+  if (document.querySelector(".vista.activa")?.id === "v-bascula" && !timerAn) timerAn = setTimeout(() => { timerAn = null; pintarTramas(); }, 300);
+}
+function procesarTrama(bytes) {
+  guardarEnBuffer(bytes);
+  const r = leerTrama(bytes, regla);
+  if (r && isFinite(r.kg)) alPeso(r.kg, r.estable);
+}
+
+const NOMBRES_CTL = { 0: "NUL", 2: "STX", 3: "ETX", 4: "EOT", 6: "ACK", 9: "TAB", 10: "LF", 13: "CR", 21: "NAK", 27: "ESC" };
+const latin = bytes => String.fromCharCode(...bytes);
+function bonito(bytes) {
+  return [...bytes].map(b => b < 32 || b === 127 ? `<span class="ctl">‹${NOMBRES_CTL[b] || "0x" + b.toString(16).toUpperCase().padStart(2, "0")}›</span>` : esc(String.fromCharCode(b))).join("");
+}
+const hex = bytes => [...bytes].map(b => b.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+
+// ======================================================================
+//  MOTOR DE REGLAS
+// ======================================================================
+// Números de la trama: el n° 1 es el primero de izquierda a derecha
+function numerosDe(s) {
+  const out = [], re = /[-+]?\s?\d+(?:[.,]\d+)?/g; let m;
+  while ((m = re.exec(s))) out.push({ txt: m[0], idx: m.index });
+  return out;
+}
+function valorDe(txt, r) {
+  const neg = /-/.test(txt);
+  let d = String(txt).replace(/[^0-9.,]/g, "");
+  if (!d) return null;
+  if (r.invertido) d = d.split("").reverse().join("");
+  let v;
+  if (/[.,]/.test(d)) { v = parseFloat(d.replace(",", ".")); if (r.decimales > 0 && !/[.,]/.test(String(txt))) v = v / 10 ** r.decimales; }
+  else { v = parseInt(d, 10); if (r.decimales > 0) v = v / 10 ** r.decimales; }
+  if (!isFinite(v)) return null;
+  return neg ? -v : v;
+}
+function leerTrama(bytes, r) {
+  const s = latin(bytes);
+  let txt = null;
+  if (r.modo === "posicion") {
+    const ini = Math.max(0, (Number(r.inicio) || 1) - 1);
+    txt = s.substr(ini, Number(r.largo) || 6);
+    if (ini > 0 && s[ini - 1] === "-" && !txt.includes("-")) txt = "-" + txt;
+  } else {
+    const n = numerosDe(s)[(Number(r.token) || 1) - 1];
+    if (!n) return null;
+    txt = n.txt;
+  }
+  const v = valorDe(txt, r);
+  if (v == null) return null;
+  let est = null;
+  if (r.estable?.modo === "texto") {
+    const up = s.toUpperCase(), si = (r.estable.si || "").toUpperCase(), no = (r.estable.no || "").toUpperCase();
+    if (no && up.includes(no)) est = false; else if (si && up.includes(si)) est = true; else if (si && !no) est = false;
+  }
+  return { kg: v * (KG_POR[r.unidad] || 1), valor: v, estable: est, texto: txt };
+}
+
+// Peso recibido → pantallas
+function alPeso(kg, banderaEstable) {
+  const p = Math.round(kg * 1000) / 1000;
   pesoActual = p;
-  $("peso").textContent = num(p, 0);
-  ultimas.push(p); if (ultimas.length > 2) ultimas.shift();
-  estable = ultimas.length === 2 && Math.max(...ultimas) - Math.min(...ultimas) <= 1;
-  $("estab").textContent = estable ? "✔ ESTABLE" : "Moviéndose...";
-  $("estab").classList.toggle("si", estable);
+  ultimas.push(p); if (ultimas.length > 3) ultimas.shift();
+  const tol = Math.max(1, Math.abs(p) * 0.002);
+  const calc = ultimas.length >= 2 && Math.max(...ultimas.slice(-2)) - Math.min(...ultimas.slice(-2)) <= tol;
+  estable = banderaEstable === true ? true : banderaEstable === false ? false : calc;
+  const dec = Math.abs(p) < 100 && p % 1 !== 0 ? 1 : 0;
+  ["peso", "cPeso", "baPeso"].forEach(id => { if (!(id === "peso" && manualPend)) $(id).textContent = num(p, dec); });
+  ["estab", "cEstab", "baEstab"].forEach(id => { if (id === "estab" && manualPend) return; $(id).textContent = estable ? "✔ ESTABLE" : "Moviéndose..."; $(id).classList.toggle("si", estable); });
   if (p <= 0) $("resultado").style.display = "none";
   actualizarBotonGuardar();
-  $("cPeso").textContent = num(p, 0);
-  $("cEstab").textContent = estable ? "✔ ESTABLE" : "Moviéndose...";
-  $("cEstab").classList.toggle("si", estable);
 }
+
+// ---------------- Detección automática ----------------
+const PARES_ESTABLE = [["ST", "US"], ["ST", "UT"], ["STABLE", "MOTION"], ["STAB", "UNST"], ["S ", "M "], ["S,", "M,"]];
+function detectarUnidad(textos) {
+  const t = textos.join(" ");
+  if (/\blbs?\b/i.test(t)) return "lb";
+  if (/\bkg\b/i.test(t)) return "kg";
+  if (/\d\s?g\b/i.test(t)) return "g";
+  return "kg";
+}
+function detectarEstabilidad(textos) {
+  const up = textos.map(t => t.toUpperCase());
+  for (const [si, no] of PARES_ESTABLE) {
+    const hs = up.some(t => t.includes(si)), hn = up.some(t => t.includes(no));
+    if (hs && hn) return { modo: "texto", si: si.trim(), no: no.trim() };
+  }
+  // Tramas parciales (al conectar o limpiar) no deben impedir la detección: basta con el 80 %
+  for (const [si, no] of PARES_ESTABLE.slice(0, 4)) if (up.filter(t => t.includes(si)).length >= up.length * 0.8) return { modo: "texto", si, no };
+  return { modo: "ninguno", si: "", no: "" };
+}
+function detectarAuto() {
+  const tr = buffer.slice(-20).map(x => x.b).filter(b => b.length);
+  if (tr.length < 2) return { error: "Necesito al menos 2 tramas en el analizador. Conecta la báscula y espera unos segundos." };
+  const textos = tr.map(latin);
+  const r = { ...REGLA_GENERICA, separador: regla.separador, largoFijo: regla.largoFijo, unidad: detectarUnidad(textos), estable: detectarEstabilidad(textos), nombre: "Detectada automáticamente" };
+  // ¿una sola corrida larga de dígitos? (tipo Toledo: peso y tara pegados)
+  const runs = textos.map(t => (t.match(/\d{10,}/) || [null])[0]).filter(Boolean);
+  if (runs.length === textos.length) {
+    const s0 = textos[0], ini = s0.indexOf(runs[0]);
+    Object.assign(r, { modo: "posicion", inicio: ini + 1, largo: runs[0].length >= 12 ? 6 : Math.floor(runs[0].length / 2), decimales: 0 });
+    return { regla: r, nota: "Encontré cifras pegadas (peso y tara juntos, estilo Toledo). Tomé los primeros 6 dígitos como peso. Si no coincide, usa 'Aprender con peso conocido'." };
+  }
+  // Elegir el número que más cambia; si nada cambia, el más largo o con decimales
+  const cant = Math.max(...textos.map(t => numerosDe(t).length));
+  if (!cant) return { error: "Las tramas no tienen números. Revisa la velocidad (baudios) y el formato." };
+  let mejor = 1, puntaje = -1;
+  for (let k = 0; k < Math.min(cant, 10); k++) {
+    const vals = textos.map(t => numerosDe(t)[k]?.txt).filter(Boolean);
+    if (vals.length < textos.length * 0.8) continue;
+    const nums = vals.map(v => valorDe(v, { decimales: -1 })).filter(v => v != null);
+    const distintos = new Set(nums).size;
+    const largo = Math.max(...vals.map(v => v.replace(/\D/g, "").length));
+    const score = (distintos > 1 ? 1000 : 0) + (vals.some(v => /[.,]/.test(v)) ? 50 : 0) + largo * 5 - k;
+    if (score > puntaje) { puntaje = score; mejor = k + 1; }
+  }
+  r.token = mejor;
+  const inv = textos.filter(t => /^\s*=/.test(t.replace(/[\x00-\x1f]/g, ""))).length >= textos.length * 0.7;
+  if (inv) r.invertido = true;
+  return { regla: r, nota: inv ? "Las tramas empiezan con '=' y suelen venir con los dígitos invertidos: marqué 'Dígitos invertidos'. Confírmalo con un peso conocido." : "" };
+}
+
+// ---------------- Aprender con peso conocido ----------------
+function aprender(W, unidad) {
+  const tr = buffer.slice(-20).map(x => x.b).filter(b => b.length);
+  if (!tr.length) return { error: "No hay tramas en el analizador. Conecta la báscula y espera unos segundos." };
+  if (!(W > 0)) return { error: "Escribe un peso mayor que cero (con cero la lectura es ambigua)." };
+  const textos = tr.map(latin);
+  const tol = x => Math.abs(x - W) <= Math.max(W * 0.002, 0.0005);
+  const base = { ...REGLA_GENERICA, separador: regla.separador, largoFijo: regla.largoFijo, unidad, estable: detectarEstabilidad(textos), nombre: "Aprendida con peso conocido" };
+  const candidatos = [];
+  const maxTok = Math.min(10, Math.max(...textos.map(t => numerosDe(t).length)));
+  for (let k = 1; k <= maxTok; k++) for (const dec of [-1, 0, 1, 2, 3]) for (const inv of [false, true])
+    candidatos.push({ ...base, modo: "token", token: k, decimales: dec, invertido: inv, _peso: (inv ? 2 : 0) + (dec === -1 ? 0 : 1) });
+  const s0 = textos[textos.length - 1];
+  for (let ini = 0; ini < s0.length; ini++) {
+    if (!/\d/.test(s0[ini])) continue;
+    for (let L = 1; L <= 9 && ini + L <= s0.length; L++) {
+      if (!/\d/.test(s0[ini + L - 1])) break;
+      for (const dec of [0, 1, 2, 3]) for (const inv of [false, true])
+        candidatos.push({ ...base, modo: "posicion", inicio: ini + 1, largo: L, decimales: dec, invertido: inv, _peso: 10 + (inv ? 2 : 0) });
+    }
+  }
+  let mejor = null, mejorPts = 0;
+  for (const c of candidatos) {
+    let pts = 0;
+    for (const b of tr) { const r = leerTrama(b, { ...c, unidad: "kg" }); if (r && tol(r.valor)) pts++; }
+    if (pts > mejorPts || (pts === mejorPts && pts > 0 && c._peso < mejor._peso)) { mejor = c; mejorPts = pts; }
+  }
+  if (!mejor) return { error: `No encontré ${W} ${unidad} en ninguna trama. Revisa que el peso esté estable, que la unidad sea la del visor, o limpia el buffer y vuelve a intentar.` };
+  delete mejor._peso;
+  return { regla: mejor, aciertos: mejorPts, total: tr.length };
+}
+
+// ======================================================================
+//  PANTALLA DE LA BÁSCULA
+// ======================================================================
+$("baBaud").innerHTML = BAUDIOS.map(b => `<option>${b}</option>`).join("");
+$("espBaud").innerHTML = BAUDIOS.map(b => `<option>${b}</option>`).join("");
+$("baFormato").innerHTML = FORMATOS.map(f => `<option>${f}</option>`).join("");
+$("baVolver").onclick = () => ir("pesar");
+
+function prepararBascula() {
+  $("baTipo").value = conf.tipo; $("baBaud").value = String(conf.baud); $("baFormato").value = conf.formato; $("baContinuo").checked = conf.continuo !== false;
+  ayudaTipo(); cargarReglaEnFormulario(regla); pintarTramas(); renderCatalogo(); pintarEstado($("txtEstado").textContent, !!conn);
+}
+function ayudaTipo() {
+  const t = $("baTipo").value;
+  $("baSerialBox").classList.toggle("oculto", t === "ble");
+  $("baAyudaTipo").innerHTML = t === "ble" ? "Para el ESP32 puente y visores con módulo BLE (HM-10, JDY, CC2541…). No hace falta vincularlo en los ajustes del teléfono."
+    : t === "clasico" ? "Para visores con módulo Bluetooth clásico (tipo HC-05/HC-06). <b>Primero vincúlalo</b> en Ajustes → Bluetooth del teléfono (clave usual 1234 o 0000). Requiere Chrome actualizado."
+    : "Para usar la app en una computadora con un cable USB-serie conectado al visor.";
+}
+$("baTipo").onchange = () => { conf.tipo = $("baTipo").value; guardarConf(); ayudaTipo(); };
+$("baBaud").onchange = () => { conf.baud = Number($("baBaud").value); guardarConf(); };
+$("baFormato").onchange = () => { conf.formato = $("baFormato").value; guardarConf(); };
+$("baContinuo").onchange = () => { conf.continuo = $("baContinuo").checked; guardarConf(); };
+$("baConectar").onclick = () => conectar(true);
+$("baDesconectar").onclick = () => desconectar();
+
+// ---- ESP32 puente ----
+function respuestaESP(txt) {
+  // Formato: INFO nombre=... ver=... baud=9600 fmt=8N1 inv=0 sim=0   |   OK ...   |   ERR ...
+  if (txt.startsWith("INFO")) {
+    const kv = Object.fromEntries(txt.split(/\s+/).slice(1).map(p => p.split("=")));
+    $("baEspBox").classList.remove("oculto");
+    $("baEspInfo").textContent = `${kv.nombre || "ESP32"} · firmware ${kv.ver || "?"} · ahora: ${kv.baud} ${kv.fmt}${kv.inv === "1" ? " invertida" : ""}${kv.sim && kv.sim !== "0" ? " · simulador " + kv.sim : ""}`;
+    if (kv.baud) $("espBaud").value = kv.baud;
+    if (kv.fmt) { $("espBits").value = kv.fmt[0]; $("espPar").value = kv.fmt[1]; $("espStop").value = kv.fmt[2]; }
+    $("espInv").checked = kv.inv === "1"; if (kv.sim) $("espSim").value = kv.sim;
+  } else if (txt.startsWith("OK")) { alert("✔ ESP32: " + txt.slice(2).trim()); conn?.escribir("INFO?\n").catch(() => {}); }
+  else if (txt.startsWith("ERR")) alert("ESP32 respondió un error: " + txt.slice(3).trim());
+}
+$("espAplicar").onclick = async () => {
+  if (!conn) return alert("Conecta primero el ESP32.");
+  const fmt = $("espBits").value + $("espPar").value + $("espStop").value;
+  try {
+    await conn.escribir(`CFG ${$("espBaud").value} ${fmt} ${$("espInv").checked ? 1 : 0}\n`);
+    await esperar(300);
+    await conn.escribir(`SIM ${$("espSim").value}\n`);
+    buffer = []; sepDetectado = null; pintarTramas();
+  } catch (e) { alert("No se pudo enviar: " + e.message); }
+};
+
+// ---- Analizador ----
+$("anSep").onchange = () => { regla.separador = $("anSep").value; sepDetectado = null; $("anLargoBox").classList.toggle("oculto", regla.separador !== "largo"); };
+$("anLargo").onchange = () => { regla.largoFijo = Number($("anLargo").value) || 18; };
+$("anCongelar").onclick = () => { congelado = !congelado; $("anCongelar").textContent = congelado ? "▶ Continuar" : "⏸ Congelar"; pintarTramas(); };
+$("anVista").onclick = () => { vistaHex = !vistaHex; $("anVista").textContent = vistaHex ? "Ver texto" : "Ver HEX"; pintarTramas(); };
+$("anLimpiar").onclick = () => { buffer = []; sepDetectado = null; pintarTramas(); };
+
+function pintarTramas() {
+  const r = reglaDelFormulario();
+  $("anCuenta").textContent = buffer.length + " tramas" + (congelado ? " · congelado" : "");
+  $("anSepDet").textContent = regla.separador === "auto" ? (sepDetectado ? "Separador detectado: " + { crlf: "fin de línea (CR/LF)", etx: "ETX", stx: "STX", pausa: "pausa entre datos" }[sepDetectado] : "Esperando datos para detectar el separador...") : "";
+  $("anTramas").innerHTML = buffer.length ? [...buffer].reverse().slice(0, 30).map(x => {
+    const l = leerTrama(x.b, r);
+    return `<div class="trama ${l ? "ok" : "mal"}"><span class="hora">${new Date(x.t).toLocaleTimeString("es-VE")} · ${x.b.length} bytes</span><br>${vistaHex ? hex(x.b) : bonito(x.b)}
+      <br><span class="hora">${l ? `→ <b style="color:var(--acento)">${num(l.kg, 2)} kg</b>${l.estable === true ? " · estable" : l.estable === false ? " · moviéndose" : ""}` : "→ sin lectura con la regla actual"}</span></div>`;
+  }).join("") : '<div class="vacio">Todavía no llegan tramas. Conecta la báscula.</div>';
+}
+
+// ---- Formulario de la regla ----
+function cargarReglaEnFormulario(r) {
+  $("anSep").value = r.separador || "auto"; $("anLargo").value = r.largoFijo || 18; $("anLargoBox").classList.toggle("oculto", r.separador !== "largo");
+  $("rgModo").value = r.modo; $("rgToken").value = r.token || 1; $("rgIni").value = r.inicio || 1; $("rgLargo").value = r.largo || 6;
+  $("rgDec").value = String(r.decimales ?? -1); $("rgUnidad").value = r.unidad || "kg"; $("rgInv").checked = !!r.invertido;
+  $("rgEstModo").value = r.estable?.modo || "ninguno"; $("rgEstSi").value = r.estable?.si || ""; $("rgEstNo").value = r.estable?.no || "";
+  modoForm();
+}
+function reglaDelFormulario() {
+  return {
+    ...regla, modo: $("rgModo").value, token: Number($("rgToken").value) || 1, inicio: Number($("rgIni").value) || 1, largo: Number($("rgLargo").value) || 6,
+    decimales: Number($("rgDec").value), unidad: $("rgUnidad").value, invertido: $("rgInv").checked, separador: $("anSep").value, largoFijo: Number($("anLargo").value) || 18,
+    estable: { modo: $("rgEstModo").value, si: $("rgEstSi").value.trim(), no: $("rgEstNo").value.trim() }
+  };
+}
+function modoForm() {
+  const pos = $("rgModo").value === "posicion";
+  $("rgTokenBox").classList.toggle("oculto", pos); $("rgPosBox").classList.toggle("oculto", !pos);
+  $("rgEstBox").classList.toggle("oculto", $("rgEstModo").value !== "texto");
+}
+["rgModo", "rgToken", "rgIni", "rgLargo", "rgDec", "rgUnidad", "rgInv", "rgEstModo", "rgEstSi", "rgEstNo"].forEach(id => {
+  $(id).addEventListener("input", () => { modoForm(); pintarTramas(); pruebaRegla(); });
+  $(id).addEventListener("change", () => { modoForm(); pintarTramas(); pruebaRegla(); });
+});
+function pruebaRegla(msg) {
+  const r = reglaDelFormulario(), tr = buffer.slice(-20);
+  if (!tr.length) { $("rgPrueba").innerHTML = msg ? `<div class="sub">${msg}</div>` : ""; return; }
+  const ok = tr.filter(x => leerTrama(x.b, r)).length;
+  $("rgPrueba").innerHTML = (msg ? `<div class="sub" style="margin-bottom:6px">${msg}</div>` : "") +
+    `<div class="sub">Prueba con las últimas ${tr.length} tramas: <b style="color:${ok === tr.length ? "#0f7a4f" : "#f1c40f"}">${ok} ✓</b> · ${tr.length - ok} ✗</div>`;
+}
+$("rgAuto").onclick = () => {
+  const d = detectarAuto();
+  if (d.error) return alert(d.error);
+  cargarReglaEnFormulario(d.regla); pintarTramas(); pruebaRegla("🔍 " + (d.nota || "Regla detectada. Revisa las lecturas en el analizador y, si están bien, toca 'Usar esta regla'."));
+};
+$("rgLimpiar").onclick = () => { cargarReglaEnFormulario({ ...REGLA_GENERICA }); pintarTramas(); pruebaRegla("Regla genérica: toma el primer número de cada trama."); };
+$("rgAprender").onclick = () => {
+  const W = Number($("rgConocido").value), u = $("rgConUnidad").value;
+  const res = aprender(W, u);
+  if (res.error) return pruebaRegla("❌ " + res.error);
+  cargarReglaEnFormulario(res.regla); pintarTramas();
+  const r = res.regla;
+  const desc = r.modo === "token" ? `número n° ${r.token}` : `caracteres ${r.inicio} al ${r.inicio + r.largo - 1}`;
+  pruebaRegla(`🎯 Encontré ${W} ${u} en ${res.aciertos} de ${res.total} tramas: ${desc}${r.decimales > 0 ? ", " + r.decimales + " decimales implícitos" : ""}${r.invertido ? ", dígitos invertidos" : ""}.` +
+    (res.aciertos < res.total ? " Las ✗ suelen ser tramas de cuando el peso se movía: puedes limpiar y repetir." : ""));
+};
+$("rgUsar").onclick = () => {
+  regla = { ...reglaDelFormulario(), nombre: regla.nombre && regla.nombre !== "Genérica" ? regla.nombre : "Personalizada" };
+  try { localStorage.setItem(REGLA_K, JSON.stringify(regla)); } catch (_) {}
+  pintarEstado($("txtEstado").textContent, !!conn);
+  alert("✔ Regla activa en este teléfono.");
+};
+
+// ---- Catálogo (Firebase: colección reglas_trama) ----
+// Aprueban reglas del catálogo los usuarios master (si todavía no hay masters configurados, cualquiera)
+const esAdmin = () => !masters.length || puede("catalogoAprobar");
+$("ctBuscar").oninput = () => renderCatalogo();
+$("ctGuardar").onclick = () => {
+  const marca = $("ctMarca").value.trim(), modelo = $("ctModelo").value.trim();
+  if (!marca) return alert("Escribe al menos la marca del visor.");
+  const r = reglaDelFormulario();
+  delete r.nombre; delete r.marca; delete r.modelo; delete r.id;
+  setDoc(doc(collection(db, "reglas_trama")), {
+    marca, modelo, notas: $("ctNotas").value.trim(), conexion: conf.tipo, serie: conf.tipo === "ble" ? null : `${conf.baud} ${conf.formato}`,
+    regla: r, ejemplos: buffer.slice(-5).map(x => hex(x.b)), autor: usuario, aprobada: esAdmin(), creadoMs: Date.now()
+  }).catch(errorGuardar);
+  $("ctMarca").value = ""; $("ctModelo").value = ""; $("ctNotas").value = "";
+  alert(esAdmin() ? "✔ Regla guardada y aprobada en el catálogo." : "✔ Regla guardada. Queda pendiente hasta que el administrador la apruebe.");
+};
+function renderCatalogo() {
+  const t = ($("ctBuscar").value || "").toLowerCase();
+  const l = [...mapReglas.values()].filter(c => (c.aprobada || c.autor === usuario || esAdmin()) && (!t || `${c.marca} ${c.modelo}`.toLowerCase().includes(t)))
+    .sort((a, b) => `${a.marca} ${a.modelo}`.localeCompare(`${b.marca} ${b.modelo}`));
+  $("ctCuenta").textContent = l.length + " reglas";
+  $("ctLista").innerHTML = l.length ? l.map(c => `<div class="card" style="background:var(--campo)">
+      <div class="fila"><b>${esc(c.marca)} ${esc(c.modelo || "")}</b>${c.aprobada ? '<span class="chip ok">Aprobada</span>' : '<span class="chip amar">Pendiente</span>'}</div>
+      <div class="sub">${{ ble: "BLE", clasico: "Bluetooth clásico", cable: "Cable" }[c.conexion] || ""}${c.serie ? " · " + esc(c.serie) : ""}${c.notas ? " · " + esc(c.notas) : ""}</div>
+      <div class="sub">Por ${esc(c.autor || "—")} · ${fecha(c.creadoMs)}</div>
+      <div class="tabs3" style="margin-top:8px">
+        <button class="btn peq" data-usar="${c.id}">Usar</button>
+        ${esAdmin() && !c.aprobada ? `<button class="btn verde peq" data-aprobar="${c.id}">Aprobar</button>` : "<span></span>"}
+        ${esAdmin() ? `<button class="btn rojo peq" data-borrar="${c.id}">Borrar</button>` : ""}
+      </div></div>`).join("") : '<div class="vacio">El catálogo está vacío. Ajusta una regla y guárdala con su marca y modelo.</div>';
+}
+$("ctLista").onclick = e => {
+  const d = e.target.dataset;
+  if (d.usar) {
+    const c = mapReglas.get(d.usar); if (!c) return;
+    regla = { ...REGLA_GENERICA, ...c.regla, nombre: "Catálogo", marca: c.marca, modelo: c.modelo };
+    try { localStorage.setItem(REGLA_K, JSON.stringify(regla)); } catch (_) {}
+    if (c.conexion && c.conexion !== conf.tipo && confirm(`Esta regla es para conexión ${c.conexion}. ¿Cambiar el tipo de conexión también?`)) { conf.tipo = c.conexion; }
+    if (c.serie) { const [b, f] = c.serie.split(" "); conf.baud = Number(b) || conf.baud; conf.formato = f || conf.formato; }
+    guardarConf(); prepararBascula(); alert(`✔ Usando la regla de ${c.marca} ${c.modelo || ""}.`);
+  }
+  if (d.aprobar) updateDoc(doc(db, "reglas_trama", d.aprobar), { aprobada: true, aprobadaPor: usuario }).catch(errorGuardar);
+  if (d.borrar && confirm("¿Borrar esta regla del catálogo?")) deleteDoc(doc(db, "reglas_trama", d.borrar)).catch(errorGuardar);
+};
+$("ctExportar").onclick = () => {
+  const l = [...mapReglas.values()].filter(c => c.aprobada || c.autor === usuario).map(({ id, ...c }) => c);
+  const actual = reglaDelFormulario();
+  const blob = new Blob([JSON.stringify({ app: "BasculaGanadera", tipo: "reglas_trama", version: 1, exportado: new Date().toISOString(), reglaActiva: actual, catalogo: l }, null, 2)], { type: "application/json" });
+  bajarArchivo(blob, `reglas_bascula_${hoyISO()}.json`);
+};
+$("ctImportarBtn").onclick = () => $("ctImportar").click();
+$("ctImportar").onchange = async () => {
+  const f = $("ctImportar").files[0]; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (data.tipo !== "reglas_trama") throw new Error("no es un archivo de reglas de la báscula");
+    const l = data.catalogo || [];
+    const existentes = new Set([...mapReglas.values()].map(c => `${c.marca}|${c.modelo}|${JSON.stringify(c.regla)}`));
+    let n = 0;
+    l.forEach(c => {
+      if (!c.marca || !c.regla || existentes.has(`${c.marca}|${c.modelo}|${JSON.stringify(c.regla)}`)) return;
+      setDoc(doc(collection(db, "reglas_trama")), { ...c, autor: c.autor || usuario, aprobada: esAdmin() && !!c.aprobada, importadoPor: usuario, creadoMs: c.creadoMs || Date.now() }).catch(errorGuardar);
+      n++;
+    });
+    if (data.reglaActiva && confirm("El archivo trae una regla activa. ¿Cargarla en el formulario?")) { cargarReglaEnFormulario({ ...REGLA_GENERICA, ...data.reglaActiva }); pintarTramas(); }
+    alert(`✔ ${n} regla(s) importadas al catálogo${n && !esAdmin() ? " (quedan pendientes de aprobación)" : ""}.`);
+  } catch (e) { alert("No se pudo importar: " + e.message); }
+  $("ctImportar").value = "";
+};
+
+pintarEstado("Báscula desconectada", false);
 
 // ======================================================================
 //  PESAJE (individual y por lote) + GANANCIA DIARIA DE PESO
@@ -925,12 +1763,13 @@ function mostrarInfoAnimal() {
 $("arete").oninput = mostrarInfoAnimal;
 
 function actualizarBotonGuardar() {
-  $("btnGuardar").disabled = !(estable && pesoActual > 0 && $("arete").value.trim());
+  $("btnGuardar").disabled = !((manualPend || (estable && pesoActual > 0)) && $("arete").value.trim());
 }
 
 $("btnGuardar").onclick = () => {
   const arete = $("arete").value.trim();
-  const peso = pesoActual;
+  const man = manualPend;
+  const peso = man ? man.valor : pesoActual;
   if (!arete || !(peso > 0)) return;
   let a = buscarArete(arete);
   if (!a) {
@@ -957,9 +1796,11 @@ $("btnGuardar").onclick = () => {
   // Guardado sin esperar respuesta: si no hay señal, queda en el teléfono y sube después
   setDoc(doc(collection(db, "pesadas")), {
     animalId: a.id, arete: a.arete, peso, fechaMs: ahora, lote: a.lote || "",
-    sesionId: sesion ? sesion.id : null, gdp, usuario, pesoAnterior: a.pesoActual ?? null, fechaAnteriorMs: a.fechaUltPeso ?? null, ...(paraVenta ? { tipo: "preventa" } : {})
+    sesionId: sesion ? sesion.id : null, gdp, usuario, pesoAnterior: a.pesoActual ?? null, fechaAnteriorMs: a.fechaUltPeso ?? null, ...(paraVenta ? { tipo: "preventa" } : {}),
+    ...camposOrigen(man)
   }).catch(errorGuardar);
-  const cambiosA = { pesoActual: peso, fechaUltPeso: ahora, pesoInicial: pIni, fechaPesoInicial: fIni, gdpUltima: gdp ?? a.gdpUltima ?? null, gdpTotal };
+  const cambiosA = { pesoActual: peso, fechaUltPeso: ahora, pesoInicial: pIni, fechaPesoInicial: fIni, gdpUltima: gdp ?? a.gdpUltima ?? null, gdpTotal, origenUltPeso: man ? "manual" : "bascula", autorizoUltPeso: man ? man.por : null };
+  if (man) auditar("peso_manual", { arete: a.arete, animalId: a.id, peso, motivo: man.motivo, contexto: paraVenta ? "pesaje para venta" : sesion ? "sesión de lote" : "pesaje individual" });
   if (paraVenta) Object.assign(cambiosA, { enEsperaVenta: true, pesoEspera: peso, fechaEspera: ahora });
   updateDoc(doc(db, "animales", a.id), cambiosA).catch(errorGuardar);
   Object.assign(a, cambiosA);
@@ -970,11 +1811,13 @@ $("btnGuardar").onclick = () => {
   const objetivo = lotes.get(a.lote)?.pesoObjetivo;
   let html = `<div class="fila"><b>✔ ${esc(a.arete)} · ${kg(peso)}</b>${objetivo && peso >= objetivo ? '<span class="chip ok">Listo para venta</span>' : ""}</div>`;
   if (dif != null) html += `<div class="sub" style="margin-top:6px">Desde la pesada anterior: ${dif >= 0 ? "+" : ""}${num(dif)} kg en ${num(dias, dias < 10 ? 1 : 0)} días</div>`;
-  html += `<div class="sub">GDP: <b style="color:#fff">${gdpTxt(gdp)}</b> · GDP total: <b style="color:#fff">${gdpTxt(gdpTotal)}</b></div>`;
+  html += `<div class="sub">GDP: <b style="color:var(--texto)">${gdpTxt(gdp)}</b> · GDP total: <b style="color:var(--texto)">${gdpTxt(gdpTotal)}</b></div>`;
   if (gdp != null && gdp < 0) html += '<div style="margin-top:6px"><span class="chip mal">⚠ Bajó de peso</span></div>';
   if (dif == null) html += '<div class="sub">Primera pesada de este animal.</div>';
   if (paraVenta) html += '<div style="margin-top:6px"><span class="chip ok">💵 En espera de venta</span></div>';
+  if (man) html += `<div style="margin-top:6px"><span class="chip amar">✍️ PESO MANUAL · autorizó ${esc(man.por)}</span></div>`;
   $("resultado").innerHTML = html; $("resultado").style.display = "block";
+  if (man) quitarManual();
 
   $("arete").value = ""; mostrarInfoAnimal();
 };
@@ -1055,7 +1898,7 @@ function formAnimal(id) {
     </select>
     <label>Notas</label><textarea id="fNotas" rows="2">${esc(a.notas)}</textarea>
     <button class="btn verde" id="fGuardar">Guardar</button>
-    ${id ? '<button class="btn rojo" id="fBorrar">Eliminar animal</button>' : ""}
+    ${id && puede("borrar") ? '<button class="btn rojo" id="fBorrar">Eliminar animal</button>' : ""}
     <button class="btn gris" id="fCancelar">Cancelar</button>`);
   $("fCancelar").onclick = cerrarModal;
   $("fGuardar").onclick = () => {
@@ -1073,7 +1916,7 @@ function formAnimal(id) {
     else crearAnimal(datos);
     cerrarModal();
   };
-  if (id) $("fBorrar").onclick = () => {
+  if ($("fBorrar")) $("fBorrar").onclick = () => {
     if (!confirm("¿Eliminar este animal? Sus pesadas quedan guardadas en el historial.")) return;
     deleteDoc(doc(db, "animales", id)).catch(errorGuardar);
     cerrarModal(); ir("animales");
@@ -1112,7 +1955,7 @@ async function renderDetalle(id, recargar) {
     const dif = ant ? p.peso - ant.peso : null;
     const d = ant ? (p.fechaMs - ant.fechaMs) / DIA : null;
     const g = ant && d >= 1 ? dif / d : null;
-    filas += `<tr><td>${fecha(p.fechaMs)}</td><td><b>${kg(p.peso)}</b></td><td>${dif == null ? "—" : (dif >= 0 ? "+" : "") + num(dif)}</td><td>${gdpTxt(g)}</td></tr>`;
+    filas += `<tr><td>${fecha(p.fechaMs)}</td><td><b>${kg(p.peso)}</b>${p.origen === "manual" ? ` <span title="Peso manual autorizado por ${esc(p.autorizo || "")}: ${esc(p.motivoManual || "")}">✍️</span>` : ""}</td><td>${dif == null ? "—" : (dif >= 0 ? "+" : "") + num(dif)}</td><td>${gdpTxt(g)}</td></tr>`;
   }
 
   $("detalle").innerHTML = `
@@ -1138,7 +1981,7 @@ async function renderDetalle(id, recargar) {
     <h3>Curva de peso</h3>
     <div class="card">${grafica(ps)}</div>
     <h3>Historial de pesos</h3>
-    ${ps.length ? `<table><tr><th>Fecha</th><th>Peso</th><th>Dif.</th><th>GDP</th></tr>${filas}</table>` : '<div class="vacio">Sin pesadas todavía.</div>'}
+    ${ps.length ? `<table><tr><th>Fecha</th><th>Peso</th><th>Dif.</th><th>GDP</th></tr>${filas}</table>${ps.some(p => p.origen === "manual") ? '<div class="sub" style="margin-top:4px">✍️ = peso manual autorizado por un master</div>' : ""}` : '<div class="vacio">Sin pesadas todavía.</div>'}
     ${a.sexo === "Hembra" ? `
       <div class="fila"><h3>Reproducción</h3><button class="btn verde peq" id="btnEvAnimal">+ Evento</button></div>
       <div class="card"><b>Estado: ${esc(rp.estado)}</b>${rp.partoEst ? `<div class="sub">Parto estimado: ${fecha(rp.partoEst)}</div>` : ""}
@@ -1149,7 +1992,7 @@ async function renderDetalle(id, recargar) {
     ${tablaSanidad(sanidad.filter(r => (r.animales || []).includes(a.id)).sort((x, y) => y.fechaMs - x.fechaMs), false)}
     ${a.estado === "activo" ? `<div class="dos"><button class="btn" id="btnMoverEste">↔️ Mover de lote</button>${lotes.get(a.lote)?.tipo === "hospital" ? '<button class="btn verde" id="btnAltaEste">✔ Dar de alta</button>' : '<button class="btn rojo" id="btnHospEste">🏥 Al hospital</button>'}</div>` : ""}
     <button class="btn" id="btnBitacora">📄 Bitácora en Excel</button>
-    ${a.estado === "activo" ? '<button class="btn rojo" id="btnMuerte">Registrar muerte</button>' : ""}`;
+    ${a.estado === "activo" && puede("muerte") ? '<button class="btn rojo" id="btnMuerte">Registrar muerte</button>' : ""}`;
   $("btnEditar").onclick = () => formAnimal(id);
   if ($("btnMoverEste")) $("btnMoverEste").onclick = () => formMoverAnimales([id]);
   if ($("btnAltaEste")) $("btnAltaEste").onclick = () => formAlta(id);
@@ -1180,8 +2023,8 @@ function grafica(ps) {
     <line x1="${m.l}" y1="${H - m.b}" x2="${W - m.r}" y2="${H - m.b}" stroke="#2d5a3f"/>
     <text x="2" y="${Y(y1) + 10}">${num(y1)}</text><text x="2" y="${H - m.b}">${num(y0)}</text>
     <text x="${m.l}" y="${H - 6}">${fecha(x0)}</text><text x="${W - m.r}" y="${H - 6}" text-anchor="end">${fecha(x1)}</text>
-    <polyline points="${pts}" fill="none" stroke="#39ff7a" stroke-width="2.5"/>
-    ${ps.map(p => `<circle cx="${X(p.fechaMs).toFixed(1)}" cy="${Y(p.peso).toFixed(1)}" r="3.5" fill="#39ff7a"/>`).join("")}
+    <polyline points="${pts}" fill="none" stroke="#0f7a4f" stroke-width="2.5"/>
+    ${ps.map(p => `<circle cx="${X(p.fechaMs).toFixed(1)}" cy="${Y(p.peso).toFixed(1)}" r="3.5" fill="#0f7a4f"/>`).join("")}
   </svg>`;
 }
 
@@ -1222,7 +2065,7 @@ function renderLotes() {
     return `<div class="card"><div class="fila"><b>${p.tipo === "corral" ? "🚧 " : "🌾 "}${esc(p.nombre)}</b><button class="btn gris peq" data-editpot="${p.id}">Editar</button></div>
       <div style="margin-top:4px">${chip}</div>
       <div class="sub" style="margin-top:4px">${p.hectareas ? num(p.hectareas, 1) + " ha · " : ""}Lotes: ${e.lotes.length ? e.lotes.map(l => esc(l.nombre)).join(", ") : "ninguno"}${e.animales ? " · " + e.animales + " animales" : ""}</div>
-      ${e.ua != null ? `<div class="sub">Carga: <b style="color:#fff">${num(e.ua, 2)} UA/ha</b> (${num(e.kg)} kg en pie)</div>` : ""}
+      ${e.ua != null ? `<div class="sub">Carga: <b style="color:var(--texto)">${num(e.ua, 2)} UA/ha</b> (${num(e.kg)} kg en pie)</div>` : ""}
       ${p.descanso ? `<div class="sub">Descanso recomendado: ${p.descanso} días</div>` : ""}</div>`;
   }).join("") : '<div class="vacio">Todavía no hay potreros.</div>';
 }
@@ -1248,7 +2091,7 @@ function formLote(id) {
     <label>Tipo de lote</label>
     <select id="lTipo"><option value="">Normal</option><option value="hospital" ${l.tipo === "hospital" ? "selected" : ""}>🏥 Hospital (enfermos / observación)</option><option value="maternidad" ${l.tipo === "maternidad" ? "selected" : ""}>🍼 Maternidad (madres con crías)</option></select>
     <button class="btn verde" id="lGuardar">Guardar</button>
-    ${id ? '<button class="btn rojo" id="lBorrar">Eliminar lote</button>' : ""}
+    ${id && puede("borrar") ? '<button class="btn rojo" id="lBorrar">Eliminar lote</button>' : ""}
     <button class="btn gris" id="lCancelar">Cancelar</button>`);
   $("lCancelar").onclick = cerrarModal;
   $("lGuardar").onclick = () => {
@@ -1260,7 +2103,7 @@ function formLote(id) {
     else setDoc(doc(collection(db, "lotes")), datos).catch(errorGuardar);
     cerrarModal();
   };
-  if (id) $("lBorrar").onclick = () => {
+  if ($("lBorrar")) $("lBorrar").onclick = () => {
     const n = [...animales.values()].filter(a => a.lote === id).length;
     if (n) return alert(`No se puede eliminar: tiene ${n} animal(es). Muévelos a otro lote primero.`);
     if (confirm("¿Eliminar este lote?")) { deleteDoc(doc(db, "lotes", id)).catch(errorGuardar); cerrarModal(); }
@@ -1277,7 +2120,7 @@ function formPotrero(id) {
     </div>
     <label>Días de descanso recomendados</label><input id="pDesc" type="number" inputmode="numeric" placeholder="Ej: 30" value="${p.descanso ?? ""}">
     <button class="btn verde" id="pGuardar">Guardar</button>
-    ${id ? '<button class="btn rojo" id="pBorrar">Eliminar potrero</button>' : ""}
+    ${id && puede("borrar") ? '<button class="btn rojo" id="pBorrar">Eliminar potrero</button>' : ""}
     <button class="btn gris" id="pCancelar">Cancelar</button>`);
   $("pCancelar").onclick = cerrarModal;
   $("pGuardar").onclick = () => {
@@ -1288,7 +2131,7 @@ function formPotrero(id) {
     else setDoc(doc(collection(db, "potreros")), datos).catch(errorGuardar);
     cerrarModal();
   };
-  if (id) $("pBorrar").onclick = () => {
+  if ($("pBorrar")) $("pBorrar").onclick = () => {
     if ([...lotes.values()].some(l => l.potrero === id)) return alert("No se puede eliminar: hay lotes asignados a este potrero.");
     if (confirm("¿Eliminar este potrero?")) { deleteDoc(doc(db, "potreros", id)).catch(errorGuardar); cerrarModal(); }
   };
@@ -1365,7 +2208,7 @@ function formEvento(arete) {
       t === "parto" ? `<div class="dos"><div><label>Arete de la cría</label><input id="eCria"></div>
         <div><label>Sexo de la cría</label><select id="eCriaSexo"><option value="">—</option><option>Hembra</option><option>Macho</option></select></div></div>
         <div class="sub" style="margin-top:6px">Si pones el arete, la cría se registra sola como animal nuevo.</div>
-        <label class="chk" style="color:#e8f0ea;font-size:15px;margin-top:10px"><input type="checkbox" id="eMat" checked> 🍼 Pasar madre y cría al corral de maternidad</label>` :
+        <label class="chk" style="color:var(--texto);font-size:15px;margin-top:10px"><input type="checkbox" id="eMat" checked> 🍼 Pasar madre y cría al corral de maternidad</label>` :
       t === "destete" ? `<label>Arete de la cría destetada</label><input id="eCria" list="dlAretes">
         <label>Mover la cría al lote</label><select id="eCriaLote"><option value="">No moverla</option>${opcionesLote("", false)}</select>` : "";
   };
@@ -1548,7 +2391,7 @@ $("v-ventas").onclick = e => {
   const c = e.target.closest("[data-venta]"); if (c) return verVenta(c.dataset.venta);
   const f = e.target.closest("tr[data-id]"); if (f && animales.has(f.dataset.id)) abrirDetalle(f.dataset.id);
 };
-$("btnNuevaVenta").onclick = () => ir("nventa");
+$("btnNuevaVenta").onclick = () => { if (exigir("ventas")) ir("nventa"); };
 
 function formVenta() {
   abrirModal(`<h2>Nueva venta</h2>
@@ -1572,7 +2415,7 @@ function formVenta() {
       .sort((a, b) => String(a.arete).localeCompare(String(b.arete), "es", { numeric: true }));
     $("vLista").innerHTML = an.length ? an.map(a => {
       const obj = lotes.get(a.lote)?.pesoObjetivo, ret = retiroHasta(a.id);
-      return `<label class="card chk" style="margin:0 0 6px;color:#e8f0ea;font-size:15px">
+      return `<label class="card chk" style="margin:0 0 6px;color:var(--texto);font-size:15px">
         <input type="checkbox" data-id="${a.id}" ${marcados.has(a.id) ? "checked" : ""}>
         <span style="flex:1"><b>${esc(a.arete)}</b> · ${kg(a.pesoActual)}<br><span class="sub">${esc(nombreLote(a.lote))}</span>
         ${obj && a.pesoActual >= obj ? '<span class="chip ok">Listo</span>' : ""} ${ret ? '<span class="chip mal">En retiro</span>' : ""}</span></label>`;
@@ -1626,7 +2469,7 @@ function verVenta(id) {
   const n = (v.animales || []).length || 1;
   abrirModal(`<h2>${v.ticket ? esc(v.ticket) : "Venta"}</h2>
     <div class="sub">${new Date(v.fechaMs).toLocaleString("es-VE")} · ${dinero(v.precioKg)}/kg${v.desbaste ? " · Desbaste " + num(v.desbaste, 1) + "%" : ""}</div>
-    <div class="sub">Comprador: <b style="color:#fff">${esc(v.comprador || "—")}</b>${v.documento ? " · " + esc(v.documento) : ""}${v.telefono ? " · " + esc(v.telefono) : ""}</div>
+    <div class="sub">Comprador: <b style="color:var(--texto)">${esc(v.comprador || "—")}</b>${v.documento ? " · " + esc(v.documento) : ""}${v.telefono ? " · " + esc(v.telefono) : ""}</div>
     ${v.destino || v.placa || v.guia ? `<div class="sub">${v.destino ? "Destino: " + esc(v.destino) + " · " : ""}${v.placa ? "Placa: " + esc(v.placa) + " · " : ""}${v.guia ? "Guía: " + esc(v.guia) : ""}</div>` : ""}
     ${v.notas ? `<div class="sub">Notas: ${esc(v.notas)}</div>` : ""}
     <div class="stats"><div><b>${(v.animales || []).length}</b><span>Animales</span></div><div><b>${num(v.pesoTotal)}</b><span>Kg netos</span></div>
@@ -1634,7 +2477,7 @@ function verVenta(id) {
     <table style="margin-top:10px"><tr><th>Arete</th><th>Bruto</th><th>Neto</th><th>Monto</th></tr>
       ${(v.animales || []).map(a => `<tr><td><b>${esc(a.arete)}</b></td><td>${kg(a.pesoBruto ?? a.peso)}</td><td>${kg(a.peso)}</td><td>${dinero(a.monto ?? a.peso * v.precioKg)}</td></tr>`).join("")}</table>
     <button class="btn verde" id="vTicket">📄 Ticket y bitácora en Excel</button>
-    <button class="btn rojo" id="vAnular">Anular venta</button>
+    ${puede("anularVenta") ? '<button class="btn rojo" id="vAnular">Anular venta</button>' : ""}
     <button class="btn gris" id="vCerrar">Cerrar</button>`);
   $("vCerrar").onclick = cerrarModal;
   $("vTicket").onclick = async () => {
@@ -1642,7 +2485,7 @@ function verVenta(id) {
     try { await descargarTickets([v]); } catch (e) { alert("No se pudo generar: " + e.message); }
     $("vTicket").disabled = false; $("vTicket").textContent = "📄 Ticket y bitácora en Excel";
   };
-  $("vAnular").onclick = () => {
+  if ($("vAnular")) $("vAnular").onclick = () => {
     if (!confirm("¿Anular esta venta? Los animales vuelven a quedar activos.")) return;
     (v.animales || []).forEach(a => { if (animales.has(a.id)) updateDoc(doc(db, "animales", a.id), { estado: "activo", fechaBajaMs: null, ventaId: null, precioVentaKg: null, ticketVenta: null }).catch(errorGuardar); });
     deleteDoc(doc(db, "ventas", v.id)).catch(errorGuardar);
@@ -1846,7 +2689,7 @@ let ultimoExcel = null;
 function prepararReportes() {
   $("rLote").innerHTML = '<option value="">Todos los lotes</option>' + opcionesLote($("rLote").value, false).replace('<option value="">Crea un lote primero</option>', "");
   if (!$("rHojas").innerHTML) {
-    $("rHojas").innerHTML = HOJAS_REP.map(([id, t]) => `<label class="chk" style="color:#e8f0ea;font-size:15px;margin:8px 0"><input type="checkbox" id="rh_${id}" checked> ${t}</label>`).join("");
+    $("rHojas").innerHTML = HOJAS_REP.map(([id, t]) => `<label class="chk" style="color:var(--texto);font-size:15px;margin:8px 0"><input type="checkbox" id="rh_${id}" checked> ${t}</label>`).join("");
     periodo("mes");
   }
 }
@@ -1859,7 +2702,7 @@ function periodo(p) {
   $("rHasta").value = p === "todo" ? "" : hoyISO();
 }
 document.querySelectorAll("[data-per]").forEach(b => b.onclick = () => periodo(b.dataset.per));
-$("btnReportes").onclick = () => ir("reportes");
+$("btnReportes").onclick = () => { if (exigir("reportes")) ir("reportes"); };
 $("btnResync").onclick = () => { if (DEMO) return alert("En modo demo no aplica."); resincronizarTodo(); };
 $("rTodas").onclick = () => HOJAS_REP.forEach(([id]) => $("rh_" + id).checked = true);
 
@@ -2031,15 +2874,15 @@ async function armarExcel() {
       if (!enRango(p.fechaMs) || (loteF && (p.lote || loteId(p.animalId)) !== loteF)) continue;
       const a = animales.get(p.animalId), dif = ant ? p.peso - ant.peso : null, d = ant ? (p.fechaMs - ant.fechaMs) / DIA : null;
       filas.push([aFecha(p.fechaMs), p.arete, a?.nombre || "", nombreLote(p.lote || a?.lote), p.peso, ant ? ant.peso : null, dif, d != null ? Math.round(d) : null,
-        d >= 1 ? dif / d : null, p.sesionId ? "Sesión de lote" : "Individual", p.usuario || ""]);
+        d >= 1 ? dif / d : null, p.sesionId ? "Sesión de lote" : "Individual", p.origen === "manual" ? "MANUAL" : "BÁSCULA", p.autorizo || "", p.motivoManual || "", p.usuario || ""]);
     }
     filas.reverse();
     const cols = [{ t: "Fecha y hora", w: 16, tipo: "fechahora" }, { t: "Arete", w: 10, b: 1 }, { t: "Nombre", w: 14 }, { t: "Lote", w: 14 }, { t: "Peso", w: 11, tipo: "kg", b: 1 },
       { t: "Peso anterior", w: 11, tipo: "kg" }, { t: "Diferencia", w: 11, tipo: "dif" }, { t: "Días desde la anterior", w: 11, tipo: "num" }, { t: "GDP", w: 13, tipo: "gdp", b: 1 },
-      { t: "Tipo de pesaje", w: 14 }, { t: "Usuario", w: 22 }];
+      { t: "Tipo de pesaje", w: 14 }, { t: "Origen del peso", w: 11, h: "center", b: 1 }, { t: "Autorizó (master)", w: 22 }, { t: "Motivo peso manual", w: 26, wrap: 1 }, { t: "Usuario", w: 22 }];
     tablaExcel(libro, "Pesadas", "2E86DE", "PESADAS DEL PERÍODO", sub, cols, filas, {
-      resaltar: f => typeof f[6] === "number" && f[6] < 0 ? PAL.rojo : null, barras: [[4, "5A8AC6"]],
-      totales: [`${filas.length} pesadas`, "", "", "PROMEDIO →", prom(filas.map(f => f[4])), "", prom(filas.map(f => f[6]).filter(v => v != null)), "", prom(filas.map(f => f[8]).filter(v => v != null)), "", ""]
+      resaltar: f => f[10] === "MANUAL" ? PAL.amarillo : typeof f[6] === "number" && f[6] < 0 ? PAL.rojo : null, barras: [[4, "5A8AC6"]],
+      totales: [`${filas.length} pesadas`, "", "", "PROMEDIO →", prom(filas.map(f => f[4])), "", prom(filas.map(f => f[6]).filter(v => v != null)), "", prom(filas.map(f => f[8]).filter(v => v != null)), "", `${filas.filter(f => f[10] === "MANUAL").length} manuales`, "", "", ""]
     });
   }
 
@@ -2186,9 +3029,16 @@ let cargados = [];   // registrados en esta sesión: { animalId, pesadaId, event
 $("btnCarga").onclick = () => ir("carga");
 $("btnVolverCarga").onclick = () => ir("animales");
 $("tabManga").onclick = () => { $("panelManga").classList.remove("oculto"); $("panelExcel").classList.add("oculto"); $("tabManga").classList.remove("gris"); $("tabExcel").classList.add("gris"); };
-$("tabExcel").onclick = () => { $("panelExcel").classList.remove("oculto"); $("panelManga").classList.add("oculto"); $("tabExcel").classList.remove("gris"); $("tabManga").classList.add("gris"); };
+$("tabExcel").onclick = () => {
+  if (!exigir("importar")) return; $("panelExcel").classList.remove("oculto"); $("panelManga").classList.add("oculto"); $("tabExcel").classList.remove("gris"); $("tabManga").classList.add("gris"); };
 $("cConectar").onclick = () => $("btnCon").click();
-$("cUsarBascula").onchange = () => $("cPesoManualBox").classList.toggle("oculto", $("cUsarBascula").checked);
+$("cUsarBascula").onchange = async () => {
+  if (!$("cUsarBascula").checked) {
+    if (!(await validarMaster())) { $("cUsarBascula").checked = true; return; }
+    $("cManualAutoriza").innerHTML = `✍️ Peso manual autorizado por <b style="color:var(--texto)">${esc(usuario)}</b>`;
+  }
+  $("cPesoManualBox").classList.toggle("oculto", $("cUsarBascula").checked);
+};
 $("cSexo").onchange = () => $("cReproBox").classList.toggle("oculto", $("cSexo").value !== "Hembra");
 $("cRepro").onchange = () => $("cMesesBox").classList.toggle("oculto", $("cRepro").value !== "Preñada");
 
@@ -2208,12 +3058,12 @@ function registrarExistente(d) {
     lote: d.lote || "", madre: d.madre || "", padre: d.padre || "", origen: d.origen || "", costoCompra: d.costoCompra ?? null,
     notas: d.notas || "", estado: "activo", cargaInicial: true
   };
-  if (d.peso > 0) Object.assign(datos, { pesoActual: d.peso, fechaUltPeso: fPeso, pesoInicial: d.peso, fechaPesoInicial: fPeso, gdpTotal: null, gdpUltima: null });
+  if (d.peso > 0) Object.assign(datos, { pesoActual: d.peso, fechaUltPeso: fPeso, pesoInicial: d.peso, fechaPesoInicial: fPeso, gdpTotal: null, gdpUltima: null, origenUltPeso: d.manual ? "manual" : "bascula", autorizoUltPeso: d.manual ? d.manual.por : null });
   const a = crearAnimal(datos);
   const reg = { animalId: a.id, arete: a.arete, pesadaId: null, eventoIds: [] };
   if (d.peso > 0) {
     const ref = doc(collection(db, "pesadas"));
-    setDoc(ref, { animalId: a.id, arete: a.arete, peso: d.peso, fechaMs: fPeso, lote: a.lote || "", sesionId: null, gdp: null, usuario, cargaInicial: true }).catch(errorGuardar);
+    setDoc(ref, { animalId: a.id, arete: a.arete, peso: d.peso, fechaMs: fPeso, lote: a.lote || "", sesionId: null, gdp: null, usuario, cargaInicial: true, ...camposOrigen(d.manual) }).catch(errorGuardar);
     reg.pesadaId = ref.id;
   }
   if (a.sexo === "Hembra" && d.repro) {
@@ -2243,15 +3093,22 @@ $("cGuardar").onclick = () => {
       if (!estable && !confirm("El peso no está estable todavía. ¿Guardar " + num(pesoActual) + " kg de todas formas?")) return;
       peso = pesoActual;
     } else if (!confirm("No hay peso de la báscula. ¿Guardar el animal sin peso?")) return;
-  } else peso = Number($("cPesoManual").value) || null;
+  } else {
+    peso = Number($("cPesoManual").value) || null;
+    if (peso && !esMaster()) return alert("Solo un usuario master puede registrar peso manual.");
+    if (peso && $("cMotivoManual").value.trim().length < 3) return alert("Escribe el motivo del peso manual.");
+    if (peso && Date.now() > validadoHasta) { alert("La verificación del master venció. Vuelve a marcar 'Escribir el peso a mano'."); $("cUsarBascula").checked = true; $("cPesoManualBox").classList.add("oculto"); return; }
+  }
+  const manualCarga = !$("cUsarBascula").checked && peso ? { valor: peso, motivo: $("cMotivoManual").value.trim(), por: usuario } : null;
   const edad = Number($("cEdad").value);
   const fechaNacMs = isoAms($("cNac").value) || (edad > 0 ? Date.now() - edad * MES : null);
   const reg = registrarExistente({
     arete, nombre: $("cNombre").value.trim(), sexo: $("cSexo").value, raza: $("cRaza").value.trim(), lote: $("cLote").value,
     origen: $("cOrigen").value, costoCompra: $("cCosto").value ? Number($("cCosto").value) : null, madre: $("cMadre").value.trim(),
     notas: $("cNotas").value.trim(), fechaNacMs, peso,
-    repro: $("cSexo").value === "Hembra" ? $("cRepro").value : "", mesesPrenez: Number($("cMeses").value) || 0
+    repro: $("cSexo").value === "Hembra" ? $("cRepro").value : "", mesesPrenez: Number($("cMeses").value) || 0, manual: manualCarga
   });
+  if (manualCarga) auditar("peso_manual", { arete, animalId: reg.animalId, peso, motivo: manualCarga.motivo, contexto: "carga inicial" });
   cargados.push(reg);
   $("cMsg").innerHTML = `✔ <b>${esc(arete)}</b> guardado${peso ? " con " + kg(peso) : ""}`;
   ["cNombre", "cEdad", "cNac", "cMadre", "cCosto", "cNotas", "cPesoManual", "cMeses"].forEach(id => $(id).value = "");
@@ -2452,19 +3309,28 @@ $("archivoImp").onchange = async () => {
     const ok = filasImp.filter(r => !r.errores.length), mal = filasImp.length - ok.length;
     const nuevosLotes = [...new Set(ok.filter(r => r.loteTxt && !lotesNombre.has(normal(r.loteTxt))).map(r => r.loteTxt))];
     $("impResumen").innerHTML = `<div class="card"><div class="stats">
-      <div><b>${filasImp.length}</b><span>Filas</span></div><div><b style="color:#39ff7a">${ok.length}</b><span>Se importan</span></div>
+      <div><b>${filasImp.length}</b><span>Filas</span></div><div><b style="color:var(--acento)">${ok.length}</b><span>Se importan</span></div>
       <div><b style="color:${mal ? "#ff8a80" : "inherit"}">${mal}</b><span>Con error</span></div><div><b>${ok.filter(r => r.peso).length}</b><span>Con peso</span></div></div>
       ${nuevosLotes.length ? `<div class="sub" style="margin-top:8px">Lotes nuevos que se crearán: <b>${nuevosLotes.map(esc).join(", ")}</b></div>` : ""}</div>`;
     $("impPrevia").innerHTML = filasImp.length ? `<table><tr><th>Fila</th><th>Arete</th><th>Sexo</th><th>Lote</th><th>Peso</th><th>Estado</th></tr>` +
-      filasImp.map(r => `<tr style="background:${r.errores.length ? "#4a1f1f" : r.avisos.length ? "#4a4220" : "transparent"}"><td>${r.fila}</td><td><b>${esc(r.arete || "—")}</b></td><td>${esc(r.sexo || "—")}</td><td>${esc(r.loteTxt || "—")}</td><td>${kg(r.peso)}</td>
+      filasImp.map(r => `<tr style="background:${r.errores.length ? "#fde3e1" : r.avisos.length ? "#fff1d6" : "transparent"}"><td>${r.fila}</td><td><b>${esc(r.arete || "—")}</b></td><td>${esc(r.sexo || "—")}</td><td>${esc(r.loteTxt || "—")}</td><td>${kg(r.peso)}</td>
         <td>${r.errores.length ? "❌ " + esc(r.errores.join(", ")) : r.avisos.length ? "⚠ " + esc(r.avisos.join(", ")) : "✔"}</td></tr>`).join("") + "</table>" : '<div class="vacio">El archivo no tiene filas con datos.</div>';
     if (ok.length) { $("btnImportar").textContent = `Importar ${ok.length} animales`; $("btnImportar").classList.remove("oculto"); }
   } catch (e) { console.error(e); $("impResumen").innerHTML = `<div class="aviso">No se pudo leer el archivo: ${esc(e.message)}</div>`; }
 };
 
-$("btnImportar").onclick = () => {
+$("btnImportar").onclick = async () => {
+  if (!exigir("importar")) return;
   const ok = filasImp.filter(r => !r.errores.length);
-  if (!ok.length || !confirm(`¿Importar ${ok.length} animales?`)) return;
+  if (!ok.length) return;
+  const conPeso = ok.filter(r => r.peso > 0).length;
+  if (conPeso) {
+    if (!esMaster()) return alert(`El archivo trae ${conPeso} peso(s). Los pesos que no vienen de la báscula son PESO MANUAL y solo un usuario master puede importarlos.`);
+    if (!(await validarMaster())) return;
+  }
+  if (!confirm(`¿Importar ${ok.length} animales?${conPeso ? `\n${conPeso} con peso manual autorizado por ${usuario}.` : ""}`)) return;
+  const manualImp = conPeso ? { motivo: "Importación desde Excel", por: usuario } : null;
+  if (manualImp) auditar("importacion_pesos", { cantidad: conPeso, archivo: $("archivoImp").files[0]?.name || "" });
   const porNombre = new Map([...lotes.values()].map(l => [normal(l.nombre), l.id]));
   ok.forEach(r => {
     let lote = "";
@@ -2478,7 +3344,7 @@ $("btnImportar").onclick = () => {
       }
       lote = porNombre.get(k);
     }
-    if (!buscarArete(r.arete)) registrarExistente({ ...r, lote });
+    if (!buscarArete(r.arete)) registrarExistente({ ...r, lote, manual: r.peso > 0 ? manualImp : null });
   });
   alert(`✔ ${ok.length} animales importados.`);
   filasImp = []; $("archivoImp").value = ""; $("impPrevia").innerHTML = ""; $("impResumen").innerHTML = ""; $("btnImportar").classList.add("oculto");
@@ -2525,7 +3391,7 @@ function renderEspera() {
       <td><button class="btn gris peq" data-sacar="${a.id}">Quitar</button></td></tr>`).join("") + "</table>" +
     `<button class="btn verde" id="btnIrVenta">💵 Ir a la venta con estos ${l.length}</button>`
     : '<div class="vacio">Pesa animales en modo "Para venta" y aparecerán aquí.</div>');
-  if ($("btnIrVenta")) $("btnIrVenta").onclick = () => { ir("nventa"); };
+  if ($("btnIrVenta")) $("btnIrVenta").onclick = () => { if (exigir("ventas")) ir("nventa"); };
 }
 $("panelEspera").onclick = e => {
   const id = e.target.dataset.sacar; if (!id) return;
@@ -2536,8 +3402,8 @@ $("panelEspera").onclick = e => {
 };
 function avisoEsperaVentas() {
   const n = enEspera().length;
-  $("avisoEspera").innerHTML = n ? `<div class="card click" id="cardEspera" style="border-color:#2ecc71"><b>💵 ${n} animal${n > 1 ? "es" : ""} pesado${n > 1 ? "s" : ""} en espera de venta</b><div class="sub">Toca para hacer la venta</div></div>` : "";
-  if ($("cardEspera")) $("cardEspera").onclick = () => ir("nventa");
+  $("avisoEspera").innerHTML = n ? `<div class="card click" id="cardEspera" style="border-color:#8fd3a8"><b>💵 ${n} animal${n > 1 ? "es" : ""} pesado${n > 1 ? "s" : ""} en espera de venta</b><div class="sub">Toca para hacer la venta</div></div>` : "";
+  if ($("cardEspera")) $("cardEspera").onclick = () => { if (exigir("ventas")) ir("nventa"); };
 }
 
 // ---------------- Agregar a la venta ----------------
@@ -2550,7 +3416,7 @@ function nvAgregarAnimal(a, silencioso) {
 }
 function nvPintarEspera() {
   const l = enEspera().filter(a => !nvItems.some(i => i.id === a.id));
-  $("nvEspera").innerHTML = l.length ? l.map(a => `<label class="card chk" style="margin:0 0 6px;color:#e8f0ea;font-size:15px">
+  $("nvEspera").innerHTML = l.length ? l.map(a => `<label class="card chk" style="margin:0 0 6px;color:var(--texto);font-size:15px">
       <input type="checkbox" data-esp="${a.id}" checked>
       <span style="flex:1"><b>${esc(a.arete)}</b> · ${kg(a.pesoEspera)} <span class="sub">(${fecha(a.fechaEspera)})</span><br><span class="sub">${esc(nombreLote(a.lote))}</span>
       ${retiroHasta(a.id) ? '<span class="chip mal">En retiro</span>' : ""}</span></label>`).join("") +
@@ -2576,7 +3442,7 @@ function nvInfo() {
   else {
     const p = pesoParaVenta(a), ret = retiroHasta(a.id), dias = p.fecha ? Math.floor((Date.now() - p.fecha) / DIA) : null;
     $("nvInfo").innerHTML = `<b>${esc(a.nombre || a.arete)}</b> · ${esc(a.sexo || "")} · ${esc(nombreLote(a.lote))}<br>` +
-      (p.peso > 0 ? `Peso para la venta: <b style="color:#fff">${kg(p.peso)}</b> (${p.fuente === "espera" ? "💵 pesado para venta" : "último peso"} del ${fecha(p.fecha)})` : '<span class="chip mal">Sin peso registrado</span>') +
+      (p.peso > 0 ? `Peso para la venta: <b style="color:var(--texto)">${kg(p.peso)}</b> (${p.fuente === "espera" ? "💵 pesado para venta" : "último peso"} del ${fecha(p.fecha)})` : '<span class="chip mal">Sin peso registrado</span>') +
       (p.fuente === "ultimo" && dias > 7 ? `<br><span class="chip amar">⚠ Ese peso tiene ${dias} días: conviene pesarlo de nuevo</span>` : "") +
       (ret ? `<br><span class="chip mal">⚠ En retiro hasta ${fecha(ret)}</span>` : "");
     ok = p.peso > 0;
@@ -2617,12 +3483,12 @@ function nvPintar() {
   nvPintarEspera();
   const fuente = { espera: "💵", ultimo: "📋" };
   $("nvItems").innerHTML = c.lineas.length ? "<table><tr><th>Arete</th><th>Bruto</th><th>Neto</th><th>Monto</th><th></th></tr>" +
-    c.lineas.map((l, k) => `<tr><td><b>${esc(l.arete)}</b> ${fuente[l.fuente]}</td><td>${kg(l.pesoBruto)}</td><td>${kg(l.neto)}</td><td>${dinero(l.monto)}</td>
+    c.lineas.map((l, k) => `<tr><td><b>${esc(l.arete)}</b> ${fuente[l.fuente]}${animales.get(l.id)?.origenUltPeso === "manual" ? " ✍️" : ""}</td><td>${kg(l.pesoBruto)}</td><td>${kg(l.neto)}</td><td>${dinero(l.monto)}</td>
       <td><button class="btn rojo peq" data-quitar="${k}">✕</button></td></tr>`).join("") + "</table>" +
     '<div class="sub" style="margin-top:6px">💵 pesado para venta · 📋 último peso registrado</div>'
     : '<div class="vacio">Todavía no hay animales en esta venta.</div>';
   $("nvTotales").innerHTML = `<div><b>${c.lineas.length}</b><span>Animales</span></div><div><b>${num(c.bruto)}</b><span>Kg brutos</span></div>
-    <div><b>${num(c.neto)}</b><span>Kg netos</span></div><div><b style="color:#39ff7a">${dinero(c.total)}</b><span>Total</span></div>`;
+    <div><b>${num(c.neto)}</b><span>Kg netos</span></div><div><b style="color:var(--acento)">${dinero(c.total)}</b><span>Total</span></div>`;
 }
 $("nvItems").onclick = e => { const k = e.target.dataset.quitar; if (k != null) { nvItems.splice(+k, 1); nvPintar(); nvInfo(); } };
 
@@ -2655,7 +3521,8 @@ $("nvConfirmar").onclick = async () => {
     const ticket = `V-${ymd}-${ref.id.slice(-4).toUpperCase()}`;
     const lineas = g.map(l => {
       const a = animales.get(l.id);
-      return { id: l.id, arete: l.arete, pesoBruto: l.pesoBruto, peso: l.neto, monto: l.monto, lote: a.lote || "", fuente: l.fuente, fechaPeso: l.fechaPeso || null, gdp: a.gdpUltima ?? null };
+      return { id: l.id, arete: l.arete, pesoBruto: l.pesoBruto, peso: l.neto, monto: l.monto, lote: a.lote || "", fuente: l.fuente, fechaPeso: l.fechaPeso || null, gdp: a.gdpUltima ?? null,
+        origenPeso: a.origenUltPeso === "manual" ? "manual" : "bascula", autorizoPeso: a.origenUltPeso === "manual" ? (a.autorizoUltPeso || "") : "" };
     });
     const venta = { ...base, ticket, animales: lineas, pesoBruto: lineas.reduce((t, l) => t + l.pesoBruto, 0), pesoTotal: lineas.reduce((t, l) => t + l.peso, 0), total: lineas.reduce((t, l) => t + l.monto, 0) };
     setDoc(ref, venta).catch(errorGuardar);
@@ -2761,6 +3628,13 @@ function hojaTicket(libro, v) {
   h.altos[r] = 18; h.altos[r + 1] = 40;
   r += 3;
 
+  // Cómo se tomaron los pesos (igual que PesoTronic)
+  const lineasT = v.animales || [], manuales = lineasT.filter(l => l.origenPeso === "manual");
+  const modalidad = !manuales.length ? "BÁSCULA (AUTOMÁTICO)" : manuales.length === lineasT.length ? "MANUAL" : `MIXTO: ${manuales.length} de ${lineasT.length} con peso MANUAL (${manuales.map(l => l.arete).join(", ")})`;
+  const autorizan = [...new Set(manuales.map(l => l.autorizoPeso).filter(Boolean))];
+  const sm = E.get({ b: 1, sz: 10, color: manuales.length ? "7A4F00" : "1E6B3D", fill: manuales.length ? PAL.amarillo : PAL.kpi, wrap: 1, borde: 1 });
+  fondo(r, 0, U, sm); h.set(r, 0, "PESAJE: " + modalidad + (autorizan.length ? " · Autorizó: " + autorizan.join(", ") : ""), sm); h.unir(r, 0, r, U); h.altos[r] = manuales.length ? 30 : 20; r++;
+
   // Declaración sanitaria
   const enRet = (v.animales || []).filter(l => {
     for (const s of sanidad) if (s.retiroDias && (s.animales || []).includes(l.id) && s.fechaMs + s.retiroDias * DIA > v.fechaMs) return true;
@@ -2856,7 +3730,7 @@ async function hojaBitacora(libro, a, venta, usados) {
   ps.forEach((p, k) => {
     const ant = ps[k - 1], dif = ant ? p.peso - ant.peso : null, d = ant ? (p.fechaMs - ant.fechaMs) / DIA : null;
     const tipo = p.tipo === "venta" || p.tipo === "preventa" ? "Pesaje para venta" : p.cargaInicial ? "Pesaje inicial" : p.sesionId ? "Pesaje en lote" : "Pesaje individual";
-    ev.push([p.fechaMs, "Pesaje", tipo, p.lote ? "Lote: " + nombreLote(p.lote) : "", p.peso, dif, d >= 1 ? dif / d : null]);
+    ev.push([p.fechaMs, "Pesaje", tipo + (p.origen === "manual" ? " · MANUAL" : ""), [p.lote ? "Lote: " + nombreLote(p.lote) : "", p.origen === "manual" ? `Autorizó ${p.autorizo || "—"}: ${p.motivoManual || ""}` : ""].filter(Boolean).join(" · "), p.peso, dif, d >= 1 ? dif / d : null]);
   });
   sanA.forEach(s => ev.push([s.fechaMs, "Sanidad", (TIPOS_SAN[s.tipo] || s.tipo) + ": " + s.producto,
     [s.dosis, s.retiroDias ? "retiro " + s.retiroDias + " días (hasta " + fecha(s.fechaMs + s.retiroDias * DIA) + ")" : "", s.aplicaA === "lote" ? "aplicado al lote" : ""].filter(Boolean).join(" · "), null, null, null]));
@@ -2990,7 +3864,7 @@ function renderMaternidad() {
     const parto = repro.filter(e => e.animalId === m.id && e.tipo === "parto").sort((x, y) => y.fechaMs - x.fechaMs)[0];
     const d = parto ? Math.floor((Date.now() - parto.fechaMs) / DIA) : null;
     html += `<div class="card" style="border-color:#8E44AD"><div class="fila"><b>🐄 ${esc(m.arete)}${m.nombre ? " · " + esc(m.nombre) : ""}</b>${d != null ? `<span class="chip">${d} días posparto</span>` : ""}</div>
-      <div class="sub">Crías: ${crias.length ? crias.map(c => `<b style="color:#fff">${esc(c.arete)}</b> (${esc(c.sexo || "—")}${c.fechaNacMs ? ", " + Math.floor((Date.now() - c.fechaNacMs) / DIA) + " días" : ""})`).join(", ") : "sin cría registrada"}</div>
+      <div class="sub">Crías: ${crias.length ? crias.map(c => `<b style="color:var(--texto)">${esc(c.arete)}</b> (${esc(c.sexo || "—")}${c.fechaNacMs ? ", " + Math.floor((Date.now() - c.fechaNacMs) / DIA) + " días" : ""})`).join(", ") : "sin cría registrada"}</div>
       <div class="dos" style="margin-top:8px"><button class="btn peq" style="background:#8E44AD" data-salmat="${m.id}">Salida de maternidad</button><button class="btn gris peq" data-ver="${m.id}">Ver ficha</button></div></div>`;
   });
   const otros = an.filter(a => !usados.has(a.id));
@@ -3033,7 +3907,7 @@ function formRotar(loteId) {
     <button class="btn verde" id="rtOk">Mover lote</button><button class="btn gris" id="rtNo">Cancelar</button>`);
   const actual = () => {
     const l = lotes.get($("rtLote").value), n = [...animales.values()].filter(a => a.estado === "activo" && a.lote === l.id).length;
-    $("rtActual").innerHTML = `Está en: <b style="color:#fff">${esc(nombrePotrero(l.potrero))}</b> · ${n} animales`;
+    $("rtActual").innerHTML = `Está en: <b style="color:var(--texto)">${esc(nombrePotrero(l.potrero))}</b> · ${n} animales`;
   };
   $("rtLote").onchange = actual; actual();
   $("rtNo").onclick = cerrarModal;
@@ -3068,7 +3942,7 @@ function formMoverAnimales(pre, destinoTipo) {
     const o = $("mvOrigen").value, b = $("mvBuscar").value.trim().toLowerCase(), dest = $("mvDestino").value;
     const an = [...animales.values()].filter(a => a.estado === "activo" && a.lote !== dest && (!o || a.lote === o) && (!b || String(a.arete).toLowerCase().includes(b)))
       .sort((x, y) => String(x.arete).localeCompare(String(y.arete), "es", { numeric: true }));
-    $("mvLista").innerHTML = an.length ? an.map(a => `<label class="card chk" style="margin:0 0 6px;color:#e8f0ea;font-size:15px">
+    $("mvLista").innerHTML = an.length ? an.map(a => `<label class="card chk" style="margin:0 0 6px;color:var(--texto);font-size:15px">
       <input type="checkbox" data-id="${a.id}" ${marcados.has(a.id) ? "checked" : ""}><span style="flex:1"><b>${esc(a.arete)}</b> · ${esc(a.sexo || "")}<br><span class="sub">${esc(nombreLote(a.lote))}</span></span></label>`).join("")
       : '<div class="vacio">No hay animales con ese filtro.</div>';
     $("mvCuenta").textContent = marcados.size + " marcados";
@@ -3100,7 +3974,7 @@ function formHospital(pre) {
       <div><label>Fecha</label><input id="hoFecha" type="date" value="${hoyISO()}"></div>
     </div>
     <label>Diagnóstico / síntomas</label><input id="hoDiag" placeholder="Ej: fiebre, diarrea, neumonía...">
-    <label class="chk" style="color:#e8f0ea;font-size:15px;margin-top:12px"><input type="checkbox" id="hoTrat"> 💉 Registrar tratamiento ahora</label>
+    <label class="chk" style="color:var(--texto);font-size:15px;margin-top:12px"><input type="checkbox" id="hoTrat"> 💉 Registrar tratamiento ahora</label>
     <div id="hoTratBox" class="oculto">
       <div class="dos"><div><label>Producto</label><input id="hoProd"></div><div><label>Dosis</label><input id="hoDosis"></div></div>
       <div class="dos"><div><label>Días de retiro</label><input id="hoRet" type="number" inputmode="numeric"></div><div><label>Costo ($)</label><input id="hoCosto" type="number" inputmode="decimal"></div></div>
@@ -3167,7 +4041,7 @@ function formSalidaMaternidad(id) {
     <label>${esc(m.arete)}${m.sexo === "Hembra" ? " (madre)" : ""} va al lote</label><select id="smMadre">${ops(def)}</select>
     ${crias.length ? `<label>Crías (${crias.map(c => esc(c.arete)).join(", ")})</label>
       <select id="smCrias"><option value="__igual">Con la madre</option><option value="__quedan">Se quedan en maternidad</option>${ops("")}</select>
-      <label class="chk" style="color:#e8f0ea;font-size:15px;margin-top:10px"><input type="checkbox" id="smDestete"> Registrar el destete de las crías</label>` : ""}
+      <label class="chk" style="color:var(--texto);font-size:15px;margin-top:10px"><input type="checkbox" id="smDestete"> Registrar el destete de las crías</label>` : ""}
     <label>Fecha</label><input id="smFecha" type="date" value="${hoyISO()}">
     <button class="btn verde" id="smOk">Confirmar salida</button><button class="btn gris" id="smNo">Cancelar</button>`);
   $("smNo").onclick = cerrarModal;
@@ -3183,6 +4057,528 @@ function formSalidaMaternidad(id) {
     }
     cerrarModal(); refrescar();
   };
+}
+
+// ======================================================================
+//  USUARIO MASTER Y PESO MANUAL (como PesoTronic)
+//  · Los master se definen en Firestore: colección "config", documento "roles",
+//    campo "masters" (lista de correos). Solo se edita desde la consola de Firebase.
+//  · Peso manual: solo master, con verificación de contraseña, motivo obligatorio,
+//    queda marcado como MANUAL con el correo de quien autorizó y en auditoría.
+// ======================================================================
+let masters = leerJSON("masters_cache", []);
+let validadoHasta = 0;            // la verificación del master dura 10 minutos
+let manualPend = null;            // peso manual pendiente en la pantalla Pesar
+const esMaster = () => DEMO || masters.map(x => String(x).toLowerCase()).includes(String(usuario).toLowerCase())
+  || mapUsuarios.get(String(usuario).toLowerCase())?.rol === "master";
+
+async function cargarRoles() {
+  aplicarRol();   // primero con la lista guardada en el teléfono (sirve sin internet)
+  if (!DEMO) {
+    try {
+      const s = await getDocs(collection(db, "config"));
+      s.forEach(d => { if (d.id === "roles") masters = d.data().masters || []; });
+      try { localStorage.setItem("masters_cache", JSON.stringify(masters)); } catch (_) {}
+    } catch (e) { console.warn("roles:", e); }
+  }
+  aplicarRol();
+}
+function aplicarRol() {
+  $("btnPesoManual").classList.toggle("oculto", !esMaster() || !!manualPend);
+  $("cUsarBascula").disabled = false;
+  pintarSaludo();
+  const r = miRol();
+  $("rolChip").textContent = ROLES[r]; $("rolChip").className = "chip " + (r === "master" ? "ok" : r === "administrador" ? "amar" : "");
+  $("btnUsuarios").classList.toggle("oculto", !puede("usuarios"));
+  $("btnReportes").classList.toggle("oculto", !puede("reportes"));
+  $("btnNuevaVenta").classList.toggle("oculto", !puede("ventas"));
+  $("tabExcel").classList.toggle("oculto", !puede("importar"));
+  // Usuario desactivado por el master: no puede seguir usando la app
+  const yo = mapUsuarios.get(String(usuario).toLowerCase());
+  if (!DEMO && usuario && yo && yo.activo === false && !masters.map(x => String(x).toLowerCase()).includes(String(usuario).toLowerCase())) {
+    if (!window.__avisoInactivo) { window.__avisoInactivo = true; alert("Tu usuario fue desactivado por el master. Se cerrará la sesión."); signOut(auth); }
+  }
+}
+
+// Huella de la contraseña (PBKDF2) para poder verificar al master sin internet
+async function pbkdf2(clave, salHex) {
+  const sal = Uint8Array.from(salHex.match(/../g).map(h => parseInt(h, 16)));
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(clave), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: sal, iterations: 120000, hash: "SHA-256" }, k, 256);
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function guardarHuella(email, clave) {
+  try {
+    if (!crypto?.subtle || !email || !clave) return;
+    const sal = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, "0")).join("");
+    const h = leerJSON("huellas", {});
+    h[String(email).toLowerCase()] = { sal, hash: await pbkdf2(clave, sal) };
+    localStorage.setItem("huellas", JSON.stringify(h));
+  } catch (_) {}
+}
+async function verificarClave(clave) {
+  if (DEMO) return;
+  if (reautenticar && navigator.onLine) {
+    try { await reautenticar(clave); guardarHuella(usuario, clave); return; }
+    catch (e) { if (e?.code !== "auth/network-request-failed") throw new Error("Contraseña incorrecta."); }
+  }
+  const h = leerJSON("huellas", {})[String(usuario).toLowerCase()];
+  if (!h) throw new Error("Sin internet: este teléfono todavía no tiene guardada tu verificación. Valida una vez con internet (o cierra sesión y vuelve a entrar).");
+  if (await pbkdf2(clave, h.sal) !== h.hash) throw new Error("Contraseña incorrecta.");
+}
+
+function validarMaster() {
+  if (!esMaster()) { alert("Solo un usuario master puede registrar peso manual."); return Promise.resolve(false); }
+  if (Date.now() < validadoHasta) return Promise.resolve(true);
+  return new Promise(res => {
+    abrirModal(`<h2>🔐 Verificación de master</h2>
+      <div class="sub">El peso manual debe autorizarlo un usuario master.</div>
+      <div class="sub" style="margin-top:6px">Usuario: <b style="color:var(--texto)">${esc(usuario)}</b></div>
+      <label>Tu contraseña</label><input id="vmClave" type="password" autocomplete="current-password">
+      ${DEMO ? '<div class="sub">Modo demo: cualquier contraseña sirve.</div>' : ""}
+      <div id="vmErr" class="sub" style="color:var(--peligro);margin-top:6px"></div>
+      <button class="btn verde" id="vmOk">Validar mi identidad</button>
+      <button class="btn gris" id="vmNo">Cancelar</button>`);
+    setTimeout(() => $("vmClave")?.focus(), 200);
+    $("vmNo").onclick = () => { cerrarModal(); res(false); };
+    $("vmOk").onclick = async () => {
+      const c = $("vmClave").value; if (!c) return;
+      $("vmOk").disabled = true; $("vmErr").textContent = "Verificando...";
+      try { await verificarClave(c); validadoHasta = Date.now() + 10 * 60000; auditar("verificacion_master", { ok: true }); cerrarModal(); res(true); }
+      catch (e) { $("vmErr").textContent = e.message; $("vmOk").disabled = false; auditar("verificacion_master", { ok: false }); }
+    };
+  });
+}
+
+async function pedirPesoManual() {
+  if (!(await validarMaster())) return null;
+  return new Promise(res => {
+    abrirModal(`<h2>✍️ Peso manual</h2>
+      <div class="sub">Autoriza: <b style="color:var(--texto)">${esc(usuario)}</b> (master)</div>
+      <label>Peso (kg) *</label><input id="pmValor" type="number" inputmode="decimal">
+      <label>Motivo *</label>
+      <select id="pmMotivo"><option>Báscula dañada o sin conexión</option><option>Visor sin batería</option><option>El animal no se queda quieto</option>
+        <option>Pesado en otra báscula</option><option>Corrección de un error de pesaje</option><option>Otro</option></select>
+      <label>Detalle del motivo *</label><input id="pmDetalle" placeholder="Explica brevemente">
+      <div id="pmErr" class="sub" style="color:var(--peligro);margin-top:6px"></div>
+      <button class="btn verde" id="pmOk">Usar este peso</button>
+      <button class="btn gris" id="pmNo">Cancelar</button>`);
+    setTimeout(() => $("pmValor")?.focus(), 200);
+    $("pmNo").onclick = () => { cerrarModal(); res(null); };
+    $("pmOk").onclick = () => {
+      const v = Number($("pmValor").value), det = $("pmDetalle").value.trim();
+      if (!(v > 0)) return $("pmErr").textContent = "Escribe un peso mayor que cero.";
+      if (v > 2000 && !confirm(`${num(v)} kg es un peso muy alto para un bovino. ¿Es correcto?`)) return;
+      if (det.length < 3) return $("pmErr").textContent = "El detalle del motivo es obligatorio.";
+      const motivo = $("pmMotivo").value + ": " + det;
+      cerrarModal(); res({ valor: v, motivo, por: usuario });
+    };
+  });
+}
+
+// Campos que se agregan a una pesada según su origen
+const camposOrigen = man => man ? { origen: "manual", motivoManual: man.motivo, autorizo: man.por } : { origen: "bascula" };
+
+function auditar(accion, datos) {
+  setDoc(doc(collection(db, "auditoria")), { accion, usuario, fechaMs: Date.now(), ...datos }).catch(() => {});
+}
+
+$("btnPesoManual").onclick = async () => {
+  const m = await pedirPesoManual();
+  if (!m) return;
+  manualPend = m;
+  $("peso").textContent = num(m.valor, m.valor % 1 ? 1 : 0);
+  $("estab").textContent = "✍️ PESO MANUAL · " + m.por; $("estab").classList.remove("si");
+  $("btnCancelarManual").classList.remove("oculto"); aplicarRol();
+  actualizarBotonGuardar();
+};
+function quitarManual() {
+  manualPend = null;
+  $("btnCancelarManual").classList.add("oculto"); aplicarRol();
+  $("peso").textContent = pesoActual != null ? num(pesoActual, 0) : "----";
+  $("estab").textContent = pesoActual != null ? (estable ? "✔ ESTABLE" : "Moviéndose...") : "—"; $("estab").classList.toggle("si", !!estable && pesoActual != null);
+  actualizarBotonGuardar();
+}
+$("btnCancelarManual").onclick = quitarManual;
+
+// ======================================================================
+//  ROLES Y PERMISOS
+// ======================================================================
+const ROLES = { master: "Master", administrador: "Administrador", operador: "Operador" };
+const PERMISOS = {
+  ventas: ["master", "administrador"], anularVenta: ["master"], muerte: ["master", "administrador"],
+  borrar: ["master", "administrador"], reportes: ["master", "administrador"], importar: ["master", "administrador"],
+  pesoManual: ["master"], usuarios: ["master"], respaldo: ["master"], catalogoAprobar: ["master"]
+};
+function miRol() {
+  if (DEMO || esMaster()) return "master";
+  const u = mapUsuarios.get(String(usuario).toLowerCase());
+  return ROLES[u?.rol] ? u.rol : "operador";
+}
+const puede = acc => (PERMISOS[acc] || []).includes(miRol());
+function exigir(acc) {
+  if (puede(acc)) return true;
+  alert(`No tienes permiso para esta acción (tu rol: ${ROLES[miRol()]}). Pídeselo a un usuario master.`);
+  return false;
+}
+
+// ======================================================================
+//  USUARIOS (solo master)
+// ======================================================================
+$("btnUsuarios").onclick = () => { if (exigir("usuarios")) ir("usuarios"); };
+
+function renderUsuarios() {
+  const fijos = masters.map(m => String(m).toLowerCase());
+  const lista = [...new Set([...fijos, ...mapUsuarios.keys()])].sort();
+  $("usLista").innerHTML = lista.length ? lista.map(email => {
+    const u = mapUsuarios.get(email) || {}, fijo = fijos.includes(email), rol = fijo ? "master" : (u.rol || "operador");
+    return `<div class="card" style="${u.activo === false ? "opacity:.55" : ""}">
+      <div class="fila"><b>${esc(u.nombre || email)}</b><span class="chip ${rol === "master" ? "ok" : rol === "administrador" ? "amar" : ""}">${ROLES[rol]}</span></div>
+      <div class="sub">${esc(email)}${fijo ? " · master fijo (definido en Firebase)" : ""}${u.activo === false ? " · <b style='color:var(--peligro)'>DESACTIVADO</b>" : ""}</div>
+      ${fijo ? "" : `<div class="tabs3" style="margin-top:8px">
+        <select data-rol="${esc(email)}" style="margin:0;padding:8px">${Object.entries(ROLES).map(([k, v]) => `<option value="${k}" ${k === rol ? "selected" : ""}>${v}</option>`).join("")}</select>
+        <button class="btn gris peq" data-activo="${esc(email)}">${u.activo === false ? "Activar" : "Desactivar"}</button>
+        <button class="btn gris peq" data-clave="${esc(email)}">Clave</button></div>`}
+    </div>`;
+  }).join("") : '<div class="vacio">Todavía no hay usuarios.</div>';
+  const ult = Number(localStorage.getItem("ultimo_respaldo")) || 0;
+  $("rsUltimo").innerHTML = ult ? `Último respaldo desde este teléfono: <b style="color:var(--texto)">${new Date(ult).toLocaleString("es-VE")}</b>` : '<span style="color:var(--aviso)">Todavía no has descargado ningún respaldo desde este teléfono.</span>';
+}
+$("usLista").onchange = e => {
+  const email = e.target.dataset.rol; if (!email) return;
+  const u = mapUsuarios.get(email) || {};
+  if (!confirm(`¿Cambiar el rol de ${email} a ${ROLES[e.target.value]}?`)) { e.target.value = u.rol || "operador"; return; }
+  setDoc(doc(db, "usuarios", email), { correo: email, nombre: u.nombre || "", rol: e.target.value, activo: u.activo !== false, modificadoPor: usuario }).catch(errorGuardar);
+  auditar("cambio_rol", { objetivo: email, rol: e.target.value });
+};
+$("usLista").onclick = async e => {
+  const d = e.target.dataset;
+  if (d.activo) {
+    const u = mapUsuarios.get(d.activo) || {}, nuevo = u.activo === false;
+    if (d.activo === String(usuario).toLowerCase() && !nuevo) return alert("No puedes desactivarte a ti mismo.");
+    if (!confirm(`¿${nuevo ? "Activar" : "Desactivar"} a ${d.activo}?`)) return;
+    setDoc(doc(db, "usuarios", d.activo), { correo: d.activo, nombre: u.nombre || "", rol: u.rol || "operador", activo: nuevo, modificadoPor: usuario }).catch(errorGuardar);
+    auditar(nuevo ? "activar_usuario" : "desactivar_usuario", { objetivo: d.activo });
+  }
+  if (d.clave) {
+    if (!restablecerClave) return alert("En modo demo no aplica.");
+    if (!confirm(`¿Enviar a ${d.clave} un correo para crear una clave nueva?`)) return;
+    try { await restablecerClave(d.clave); alert("✔ Correo enviado. Que revise también la carpeta de spam."); auditar("restablecer_clave", { objetivo: d.clave }); }
+    catch (err) { alert("No se pudo enviar: " + err.message); }
+  }
+};
+$("usCrear").onclick = async () => {
+  if (!exigir("usuarios")) return;
+  const email = $("usCorreo").value.trim().toLowerCase(), clave = $("usClave").value, nombre = $("usNombre").value.trim(), rol = $("usRol").value;
+  if (!/^\S+@\S+\.\S+$/.test(email)) return alert("Escribe un correo válido.");
+  if (clave.length < 6) return alert("La clave temporal debe tener al menos 6 caracteres.");
+  if (mapUsuarios.has(email)) return alert("Ese usuario ya existe. Cambia su rol en la lista.");
+  if (!DEMO && !navigator.onLine) return alert("Para crear un usuario necesitas internet.");
+  $("usCrear").disabled = true; $("usCrear").textContent = "Creando...";
+  try {
+    if (crearCuenta) await crearCuenta(email, clave);
+    setDoc(doc(db, "usuarios", email), { correo: email, nombre, rol, activo: true, creadoPor: usuario, creadoMs: Date.now() }).catch(errorGuardar);
+    auditar("crear_usuario", { objetivo: email, rol });
+    ["usCorreo", "usClave", "usNombre"].forEach(id => $(id).value = "");
+    alert(`✔ Usuario creado: ${email}\nRol: ${ROLES[rol]}\nDale la clave temporal; puede cambiarla con "Clave".`);
+  } catch (err) {
+    const msg = err?.code === "auth/email-already-in-use" ? "ese correo ya tiene cuenta en Firebase. Solo le asigné el rol." : err.message;
+    if (err?.code === "auth/email-already-in-use") setDoc(doc(db, "usuarios", email), { correo: email, nombre, rol, activo: true, creadoPor: usuario, creadoMs: Date.now() }).catch(errorGuardar);
+    alert("Aviso: " + msg);
+  }
+  $("usCrear").disabled = false; $("usCrear").textContent = "Crear usuario";
+};
+$("usVerAuditoria").onclick = async () => {
+  if (!exigir("usuarios")) return;
+  $("usAuditoria").innerHTML = '<div class="vacio">Cargando...</div>';
+  try {
+    const desde = Date.now() - 30 * DIA;
+    const sn = await getDocs(query(collection(db, "auditoria"), where("fechaMs", ">=", desde)));
+    const l = sn.docs.map(d => d.data()).sort((a, b) => b.fechaMs - a.fechaMs).slice(0, 80);
+    const NOM = { peso_manual: "✍️ Peso manual", verificacion_master: "🔐 Verificación master", importacion_pesos: "📥 Importó pesos", crear_usuario: "👤 Creó usuario", cambio_rol: "🔁 Cambió rol",
+      activar_usuario: "✔ Activó usuario", desactivar_usuario: "⛔ Desactivó usuario", restablecer_clave: "🔑 Restablecer clave", respaldo: "💾 Respaldo", restauracion: "♻️ Restauración" };
+    $("usAuditoria").innerHTML = l.length ? "<table><tr><th>Fecha</th><th>Usuario</th><th>Acción</th></tr>" + l.map(a => `<tr><td>${new Date(a.fechaMs).toLocaleString("es-VE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+      <td>${esc(a.usuario)}</td><td>${esc(NOM[a.accion] || a.accion)}${a.accion === "verificacion_master" ? (a.ok ? " ✓" : " <b style='color:var(--peligro)'>falló</b>") : ""}
+      ${a.arete ? " · " + esc(a.arete) : ""}${a.peso ? " · " + kg(a.peso) : ""}${a.objetivo ? " · " + esc(a.objetivo) : ""}${a.motivo ? "<br><span class='sub'>" + esc(a.motivo) + "</span>" : ""}</td></tr>`).join("") + "</table>"
+      : '<div class="vacio">Sin registros en los últimos 30 días.</div>';
+  } catch (e) { $("usAuditoria").innerHTML = `<div class="aviso">No se pudo cargar: ${esc(e.message)}</div>`; }
+};
+
+// ======================================================================
+//  RESPALDO COMPLETO
+// ======================================================================
+const COLS_RESPALDO = [...SINC, "pesadas", "sesiones", "auditoria"];
+const limpiarDoc = d => { const o = { ...d }; delete o.id; delete o.actualizado; delete o.borrado; return o; };
+$("rsDescargar").onclick = async () => {
+  if (!exigir("respaldo")) return;
+  $("rsDescargar").disabled = true; $("rsDescargar").textContent = "Preparando...";
+  try {
+    const cols = {};
+    for (const c of SINC) cols[c] = Object.fromEntries([...tienda(c).values()].map(d => [d.id, limpiarDoc(d)]));
+    for (const c of ["pesadas", "sesiones", "auditoria"]) {
+      $("rsDescargar").textContent = "Leyendo " + c + "...";
+      try { const sn = await getDocs(collection(db, c)); cols[c] = Object.fromEntries(sn.docs.map(d => [d.id, limpiarDoc(d.data())])); } catch (e) { cols[c] = {}; }
+    }
+    const total = Object.values(cols).reduce((t, x) => t + Object.keys(x).length, 0);
+    const blob = new Blob([JSON.stringify({ app: "BasculaGanadera", tipo: "respaldo", version: 1, proyecto: firebaseConfig.projectId, fecha: new Date().toISOString(), por: usuario, colecciones: cols })], { type: "application/json" });
+    bajarArchivo(blob, `Respaldo_BasculaGanadera_${hoyISO()}.json`);
+    try { localStorage.setItem("ultimo_respaldo", Date.now()); } catch (_) {}
+    auditar("respaldo", { registros: total });
+    renderUsuarios();
+    alert(`✔ Respaldo descargado: ${total} registros. Guárdalo en un lugar seguro (Drive o computadora).`);
+  } catch (e) { alert("No se pudo hacer el respaldo: " + e.message); }
+  $("rsDescargar").disabled = false; $("rsDescargar").textContent = "📥 Descargar respaldo completo";
+};
+$("rsElegir").onclick = () => { if (exigir("respaldo")) $("rsArchivo").click(); };
+$("rsArchivo").onchange = async () => {
+  const f = $("rsArchivo").files[0]; if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (data.tipo !== "respaldo" || !data.colecciones) throw new Error("no es un respaldo de esta app");
+    if (data.proyecto && data.proyecto !== firebaseConfig.projectId && !confirm(`El respaldo es del proyecto "${data.proyecto}" y estás en "${firebaseConfig.projectId}". ¿Continuar?`)) return;
+    const modo = $("rsModo").value;
+    $("rsInfo").innerHTML = '<div class="vacio">Comparando con los datos actuales...</div>';
+    const existentes = {};
+    for (const c of SINC) existentes[c] = new Set(tienda(c).keys());
+    for (const c of ["pesadas", "sesiones"]) {
+      if (modo === "todo") { existentes[c] = new Set(); continue; }
+      try { const sn = await getDocs(collection(db, c)); existentes[c] = new Set(sn.docs.map(d => d.id)); } catch (_) { existentes[c] = new Set(); }
+    }
+    const plan = [];
+    for (const [c, docs] of Object.entries(data.colecciones)) {
+      if (c === "auditoria" || !COLS_RESPALDO.includes(c)) continue;   // la auditoría no se reescribe
+      for (const [id, d] of Object.entries(docs)) if (modo === "todo" || !existentes[c]?.has(id)) plan.push([c, id, d]);
+    }
+    const porCol = plan.reduce((o, [c]) => (o[c] = (o[c] || 0) + 1, o), {});
+    $("rsInfo").innerHTML = `<div class="card" style="background:var(--campo)"><b>Respaldo del ${new Date(data.fecha).toLocaleString("es-VE")}</b><div class="sub">Hecho por ${esc(data.por || "—")}</div>
+      <div class="sub" style="margin-top:6px">${plan.length ? `Se ${modo === "todo" ? "escribirán" : "agregarán"} <b style="color:var(--texto)">${plan.length}</b> registros: ` + Object.entries(porCol).map(([c, n]) => `${c} ${n}`).join(" · ") : "No falta nada: los datos actuales ya contienen todo el respaldo."}</div>
+      ${plan.length ? '<button class="btn verde" id="rsAplicar">♻️ Restaurar ahora</button>' : ""}</div>`;
+    if ($("rsAplicar")) $("rsAplicar").onclick = async () => {
+      if (!confirm(`¿Restaurar ${plan.length} registros${modo === "todo" ? " SOBRESCRIBIENDO los actuales" : ""}?`)) return;
+      $("rsAplicar").disabled = true;
+      let ok = 0, mal = 0;
+      for (const [c, id, d] of plan) {
+        try { await conTiempo(setDoc(doc(db, c, id), d), 15000); ok++; } catch (_) { mal++; }
+        if ((ok + mal) % 50 === 0) $("rsAplicar").textContent = `Restaurando ${ok + mal} de ${plan.length}...`;
+      }
+      auditar("restauracion", { registros: ok, fallidos: mal, modo });
+      $("rsInfo").innerHTML = `<div class="card">✔ Restaurados ${ok} registros${mal ? ` · <b style="color:var(--peligro)">${mal} rechazados</b> (por ejemplo, pesos manuales autorizados por otro master)` : ""}.</div>`;
+    };
+  } catch (e) { $("rsInfo").innerHTML = `<div class="aviso">No se pudo leer el respaldo: ${esc(e.message)}</div>`; }
+  $("rsArchivo").value = "";
+};
+
+// ======================================================================
+//  PANEL DE INICIO Y ALERTAS
+// ======================================================================
+function grafBarrasH(items, fmt, color) {
+  if (!items.length) return '<div class="vacio">Sin datos todavía.</div>';
+  const max = Math.max(...items.map(i => i.v), 1);
+  return items.map(i => `<div style="margin:6px 0"><div class="fila sub"><span style="color:var(--texto)">${esc(i.t)}</span><span>${fmt(i.v)}${i.extra ? " · " + i.extra : ""}</span></div>
+    <div style="background:var(--campo);border-radius:6px;height:12px;margin-top:3px"><div style="width:${Math.max(2, i.v / max * 100)}%;height:12px;border-radius:6px;background:${color}"></div></div></div>`).join("");
+}
+function grafBarrasV(items, fmt, color) {
+  if (!items.some(i => i.v > 0)) return '<div class="vacio">Sin datos todavía.</div>';
+  const max = Math.max(...items.map(i => i.v), 1), W = 600, H = 170, bw = W / items.length;
+  return `<svg viewBox="0 0 ${W} ${H + 34}" width="100%">${items.map((i, k) => {
+    const h = i.v / max * H, x = k * bw + bw * 0.15, w = bw * 0.7;
+    return `<rect x="${x}" y="${H - h + 14}" width="${w}" height="${Math.max(h, 1)}" rx="4" fill="${color}"/>
+      <text x="${x + w / 2}" y="${H - h + 10}" text-anchor="middle" style="fill:#e8f0ea;font-size:12px">${i.v ? fmt(i.v) : ""}</text>
+      <text x="${x + w / 2}" y="${H + 30}" text-anchor="middle" style="font-size:12px">${esc(i.t)}</text>`;
+  }).join("")}</svg>`;
+}
+
+function calcularAlertas() {
+  const ahora = Date.now(), act = [...animales.values()].filter(a => a.estado === "activo"), A = [];
+  const add = (nivel, icono, texto, vista, clave) => A.push({ nivel, icono, texto, vista, clave });
+  const pend = sanidad.filter(r => r.proximaMs && !proximaCumplida(r));
+  const venc = pend.filter(r => r.proximaMs < ahora), prox = pend.filter(r => r.proximaMs >= ahora && r.proximaMs - ahora <= 7 * DIA);
+  if (venc.length) add("alta", "💉", `${venc.length} aplicación(es) de sanidad VENCIDA(S): ${[...new Set(venc.map(r => r.producto))].slice(0, 3).join(", ")}`, "sanidad", "san_venc");
+  if (prox.length) add("media", "💉", `${prox.length} aplicación(es) de sanidad en los próximos 7 días`, "sanidad", "san_prox");
+  const hembras = act.filter(a => a.sexo === "Hembra").map(h => ({ h, r: estadoRepro(h.id) })).filter(x => x.r.partoEst);
+  const atras = hembras.filter(x => x.r.partoEst < ahora), pronto = hembras.filter(x => x.r.partoEst >= ahora && x.r.partoEst - ahora <= 30 * DIA);
+  if (atras.length) add("alta", "🤰", `${atras.length} parto(s) estimado(s) ya pasaron sin registrar: ${atras.slice(0, 4).map(x => x.h.arete).join(", ")}`, "repro", "parto_atras");
+  if (pronto.length) add("media", "🤰", `${pronto.length} parto(s) en los próximos 30 días: ${pronto.sort((a, b) => a.r.partoEst - b.r.partoEst).slice(0, 4).map(x => `${x.h.arete} (${fecha(x.r.partoEst)})`).join(", ")}`, "repro", "parto_pronto");
+  const hl = new Set([...lotes.values()].filter(l => l.tipo === "hospital").map(l => l.id));
+  const hosp = act.filter(a => hl.has(a.lote)), hospLargo = hosp.filter(a => a.hospital?.desdeMs && ahora - a.hospital.desdeMs > 7 * DIA);
+  if (hospLargo.length) add("alta", "🏥", `${hospLargo.length} animal(es) llevan más de 7 días en el hospital: ${hospLargo.slice(0, 4).map(a => a.arete).join(", ")}`, "lotes", "hosp_largo");
+  else if (hosp.length) add("baja", "🏥", `${hosp.length} animal(es) en el hospital`, "lotes", "hosp");
+  const ml = new Set([...lotes.values()].filter(l => l.tipo === "maternidad").map(l => l.id));
+  const matLarga = act.filter(a => ml.has(a.lote) && a.sexo === "Hembra" && (() => { const p = repro.filter(e => e.animalId === a.id && e.tipo === "parto").sort((x, y) => y.fechaMs - x.fechaMs)[0]; return p && ahora - p.fechaMs > 60 * DIA; })());
+  if (matLarga.length) add("media", "🍼", `${matLarga.length} madre(s) con más de 60 días en maternidad`, "lotes", "mat_larga");
+  const bajaron = act.filter(a => a.gdpUltima != null && a.gdpUltima < 0 && ahora - (a.fechaUltPeso || 0) < 45 * DIA);
+  if (bajaron.length) add("media", "📉", `${bajaron.length} animal(es) bajaron de peso en su última pesada: ${bajaron.slice(0, 5).map(a => a.arete).join(", ")}`, "animales", "bajaron");
+  const sinPesar = act.filter(a => !a.fechaUltPeso || ahora - a.fechaUltPeso > 30 * DIA);
+  if (sinPesar.length) add("baja", "⚖️", `${sinPesar.length} animal(es) sin pesar hace más de 30 días`, "animales", "sin_pesar");
+  const listos = act.filter(a => lotes.get(a.lote)?.pesoObjetivo && a.pesoActual >= lotes.get(a.lote).pesoObjetivo);
+  const listosRet = listos.filter(a => retiroHasta(a.id));
+  if (listos.length) add("buena", "💰", `${listos.length} animal(es) listos para venta${listosRet.length ? ` (${listosRet.length} en período de retiro)` : ""}`, "ventas", "listos");
+  const esp = act.filter(a => a.enEsperaVenta);
+  if (esp.length) add("buena", "💵", `${esp.length} animal(es) pesados en espera de venta`, "ventas", "espera");
+  const potListos = [...potreros.values()].filter(p => estadoPotrero(p.id).listo);
+  if (potListos.length) add("buena", "🌾", `Potreros descansados y listos para pastoreo: ${potListos.map(p => p.nombre).join(", ")}`, "lotes", "pot_listos");
+  if (puede("catalogoAprobar")) { const pc = [...mapReglas.values()].filter(c => !c.aprobada).length; if (pc) add("media", "📚", `${pc} regla(s) de báscula pendientes de aprobar`, "bascula", "cat_pend"); }
+  if (puede("respaldo")) {
+    const ult = Number(localStorage.getItem("ultimo_respaldo")) || 0;
+    if (!ult || ahora - ult > 7 * DIA) add("media", "💾", ult ? `El último respaldo fue hace ${Math.floor((ahora - ult) / DIA)} días` : "Todavía no has hecho un respaldo de los datos", "usuarios", "respaldo");
+  }
+  if (!navigator.onLine && pendientes) add("media", "📴", `Sin conexión: ${pendientes} cambio(s) esperando para subir`, null, "offline");
+  const orden = { alta: 0, media: 1, baja: 2, buena: 3 };
+  return A.sort((a, b) => orden[a.nivel] - orden[b.nivel]);
+}
+
+function renderInicio() {
+  const act = [...animales.values()].filter(a => a.estado === "activo"), conPeso = act.filter(a => a.pesoActual > 0);
+  const prom = l => l.length ? l.reduce((t, v) => t + v, 0) / l.length : null;
+  const hl = new Set([...lotes.values()].filter(l => l.tipo === "hospital").map(l => l.id));
+  const iniMes = new Date(); iniMes.setDate(1); iniMes.setHours(0, 0, 0, 0);
+  const ventasMes = ventas.filter(v => v.fechaMs >= iniMes.getTime()).reduce((t, v) => t + (v.total || 0), 0);
+  $("inFecha").textContent = new Date().toLocaleDateString("es-VE", { weekday: "short", day: "numeric", month: "short" });
+  const k = (v, t) => `<div><b>${v}</b><span>${t}</span></div>`;
+  $("inKpi1").innerHTML = k(act.length, "Animales") + k(num(prom(conPeso.map(a => a.pesoActual))), "Peso prom.") +
+    k(prom(act.filter(a => a.gdpTotal != null).map(a => a.gdpTotal)) == null ? "—" : num(prom(act.filter(a => a.gdpTotal != null).map(a => a.gdpTotal)), 2), "GDP prom.") + k(num(conPeso.reduce((t, a) => t + a.pesoActual, 0) / 1000, 1) + " t", "En pie");
+  $("inKpi2").style.marginTop = "6px";
+  $("inKpi2").innerHTML = k(act.filter(a => lotes.get(a.lote)?.pesoObjetivo && a.pesoActual >= lotes.get(a.lote).pesoObjetivo).length, "Listos venta") +
+    k(act.filter(a => a.sexo === "Hembra" && estadoRepro(a.id).estado === "Preñada").length, "Preñadas") + k(act.filter(a => hl.has(a.lote)).length, "Hospital") + k(dinero(ventasMes).replace(",00", ""), "Ventas mes");
+
+  const al = calcularAlertas();
+  renderHeroe();
+  const urg = al.filter(a => a.nivel === "alta" || a.nivel === "media").length;
+  $("campanaN").textContent = urg; $("campanaN").classList.toggle("oculto", !urg);
+  const color = { alta: "#b03a2e", media: "#b7950b", baja: "#2d5a3f", buena: "#1e6b3d" };
+  $("inAlertas").innerHTML = al.length ? al.map(a => `<div class="card click" ${a.vista ? `data-ira="${a.vista}"` : ""} style="border-left:5px solid ${color[a.nivel]};padding:10px 12px">
+      <div class="fila"><span>${a.icono} ${esc(a.texto)}</span>${a.vista ? '<span class="sub">›</span>' : ""}</div></div>`).join("")
+    : '<div class="card" style="border-left:5px solid #1e6b3d">✔ Todo en orden: no hay alertas.</div>';
+
+  const ls = [...lotes.values()].map(l => { const an = act.filter(a => a.lote === l.id && a.pesoActual > 0); return { t: l.nombre, v: prom(an.map(a => a.pesoActual)) || 0, extra: an.length + " anim." }; })
+    .filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+  $("inGrafLotes").innerHTML = grafBarrasH(ls, v => num(v) + " kg", "#0f7a4f");
+  const rangos = [];
+  if (conPeso.length) {
+    const paso = 50, min = Math.floor(Math.min(...conPeso.map(a => a.pesoActual)) / paso) * paso, max = Math.max(...conPeso.map(a => a.pesoActual));
+    for (let x = min; x <= max; x += paso) rangos.push({ t: `${x}`, v: conPeso.filter(a => a.pesoActual >= x && a.pesoActual < x + paso).length });
+  }
+  $("inGrafDist").innerHTML = rangos.length ? grafBarrasV(rangos.slice(0, 14), v => v, "#5a8ac6") + '<div class="sub">Cantidad de animales por rango de peso (kg)</div>' : '<div class="vacio">Sin pesos todavía.</div>';
+  const MES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"], hoy = new Date(), vm = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1), d2 = new Date(hoy.getFullYear(), hoy.getMonth() - i + 1, 1);
+    vm.push({ t: MES[d.getMonth()], v: ventas.filter(v => v.fechaMs >= d.getTime() && v.fechaMs < d2.getTime()).reduce((t, v) => t + (v.total || 0), 0) });
+  }
+  $("inGrafVentas").innerHTML = grafBarrasV(vm, v => v >= 1000 ? "$" + num(v / 1000, 1) + "k" : "$" + num(v), "#2ecc71");
+  $("btnAvisos").classList.toggle("oculto", !("Notification" in window) || Notification.permission === "granted");
+  avisarSistema(al);
+}
+$("inAlertas").onclick = e => {
+  const c = e.target.closest("[data-ira]"); if (!c) return;
+  const v = c.dataset.ira;
+  if (v === "ventas" && !puede("ventas")) return ir("animales");
+  if (v === "usuarios" && !exigir("usuarios")) return;
+  ir(v);
+};
+
+// ---------------- Avisos del sistema (notificaciones del teléfono) ----------------
+$("btnAvisos").onclick = async () => {
+  try {
+    const p = await Notification.requestPermission();
+    if (p === "granted") { alert("✔ Avisos activados. Te avisaré de las alertas importantes al abrir la app."); localStorage.removeItem("avisados"); renderInicio(); }
+    else alert("No se activaron los avisos. Puedes activarlos en los ajustes de Chrome.");
+  } catch (e) { alert("Este teléfono no permite avisos: " + e.message); }
+};
+async function avisarSistema(alertas) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const hoy = hoyISO(), ya = leerJSON("avisados", {});
+  const nuevas = alertas.filter(a => (a.nivel === "alta" || a.nivel === "media") && ya[a.clave] !== hoy);
+  if (!nuevas.length) return;
+  for (const a of nuevas.slice(0, 3)) {
+    ya[a.clave] = hoy;
+    try {
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+      if (reg) await reg.showNotification("Báscula Ganadera", { body: `${a.icono} ${a.texto}`, icon: "icono-192.png", badge: "icono-192.png", tag: a.clave });
+      else new Notification("Báscula Ganadera", { body: `${a.icono} ${a.texto}`, icon: "icono-192.png", tag: a.clave });
+    } catch (_) {}
+  }
+  try { localStorage.setItem("avisados", JSON.stringify(ya)); } catch (_) {}
+}
+
+// ======================================================================
+//  DISEÑO: saludo, campana, bienvenida y tarjeta principal del inicio
+// ======================================================================
+const t0Bienvenida = Date.now();
+function ocultarBienvenida() {
+  const espera = Math.max(0, 900 - (Date.now() - t0Bienvenida));
+  setTimeout(() => { $("splash").classList.add("fuera"); setTimeout(() => $("splash").remove?.(), 600); }, espera);
+}
+setTimeout(() => $("splash")?.classList.add("fuera"), 8000);   // por si algo tarda demasiado
+
+function pintarSaludo() {
+  if (!usuario) return;
+  const u = mapUsuarios.get(String(usuario).toLowerCase());
+  const nombre = (u?.nombre || (DEMO ? "Ganadero" : String(usuario).split("@")[0].replace(/[._\-+0-9]+/g, " "))).trim().split(/\s+/)[0] || "Ganadero";
+  $("saludo").textContent = "Hola " + nombre.toUpperCase();
+  $("avatar").textContent = nombre[0].toUpperCase();
+}
+$("btnCampana").onclick = () => { ir("inicio"); setTimeout(() => $("inAlertas").scrollIntoView({ behavior: "smooth", block: "start" }), 50); };
+$("hPesar").onclick = () => ir("pesar");
+$("hDetalle").onclick = () => ir(modoHeroe === "ventas" && puede("ventas") ? "ventas" : "animales");
+
+let modoHeroe = "peso";
+$("hSeg").onclick = e => {
+  const b = e.target.closest("[data-m]"); if (!b) return;
+  modoHeroe = b.dataset.m;
+  $("hSeg").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  renderHeroe();
+};
+
+function renderHeroe() {
+  const act = [...animales.values()].filter(a => a.estado === "activo");
+  const conPeso = act.filter(a => a.pesoActual > 0);
+  const prom = l => l.length ? l.reduce((t, v) => t + v, 0) / l.length : null;
+  let finca = ""; try { finca = localStorage.getItem("finca_nombre") || ""; } catch (_) {}
+  $("hFinca").textContent = "🏡 " + (finca || "Mi finca");
+  const nLotes = [...lotes.values()].filter(l => !l.tipo).length;
+  $("hLotes").textContent = nLotes + (nLotes === 1 ? " lote" : " lotes");
+  $("hAnimales").textContent = num(act.length);
+  const ult = Math.max(0, ...act.map(a => a.fechaUltPeso || 0));
+  $("hUltimo").textContent = "Último pesaje: " + (ult ? fecha(ult) : "—");
+  const offline = !navigator.onLine;
+  $("hEstado").textContent = offline ? "● Sin conexión" : pendientes ? "● Subiendo" : "● Al día";
+  $("hEstado").className = "chip " + (offline ? "amar" : pendientes ? "amar" : "ok");
+
+  // Lote con mejor valor según el modo elegido
+  const porLote = [...lotes.values()].map(l => {
+    const an = act.filter(a => a.lote === l.id);
+    return { l, peso: prom(an.filter(a => a.pesoActual > 0).map(a => a.pesoActual)), gdp: prom(an.filter(a => a.gdpTotal != null).map(a => a.gdpTotal)), n: an.length };
+  }).filter(x => x.n);
+
+  if (modoHeroe === "peso") {
+    const p = prom(conPeso.map(a => a.pesoActual));
+    const objs = act.map(a => lotes.get(a.lote)?.pesoObjetivo).filter(Boolean), obj = prom(objs);
+    const listos = act.filter(a => lotes.get(a.lote)?.pesoObjetivo && a.pesoActual >= lotes.get(a.lote).pesoObjetivo).length;
+    $("hTitulo").textContent = "Peso promedio";
+    $("hValor").innerHTML = p == null ? "—" : `${num(p)}<small>kg</small>`;
+    $("hDe").textContent = obj ? `de ${num(obj)} kg objetivo · ${listos} listos` : `${conPeso.length} animales pesados`;
+    const top = porLote.filter(x => x.peso != null).sort((a, b) => b.peso - a.peso)[0];
+    $("hLadoT").textContent = "Lote más pesado"; $("hLadoV").textContent = top ? `${top.l.nombre} · ${num(top.peso)} kg` : "—";
+    $("hBarra").style.width = (p && obj ? Math.min(100, p / obj * 100) : 0) + "%";
+  } else if (modoHeroe === "gdp") {
+    const g = prom(act.filter(a => a.gdpTotal != null).map(a => a.gdpTotal));
+    const META = 0.8;   // referencia de ganancia diaria para la barra
+    $("hTitulo").textContent = "Ganancia diaria promedio";
+    $("hValor").innerHTML = g == null ? "—" : `${num(g, 2)}<small>kg/día</small>`;
+    $("hDe").textContent = `referencia ${num(META, 2)} kg/día`;
+    const top = porLote.filter(x => x.gdp != null).sort((a, b) => b.gdp - a.gdp)[0];
+    $("hLadoT").textContent = "Lote que más gana"; $("hLadoV").textContent = top ? `${top.l.nombre} · ${num(top.gdp, 2)}` : "—";
+    $("hBarra").style.width = (g ? Math.max(0, Math.min(100, g / META * 100)) : 0) + "%";
+  } else {
+    const hoy = new Date(), ini = new Date(hoy.getFullYear(), hoy.getMonth(), 1).getTime(), iniAnt = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1).getTime();
+    const mes = ventas.filter(v => v.fechaMs >= ini), ant = ventas.filter(v => v.fechaMs >= iniAnt && v.fechaMs < ini);
+    const tot = mes.reduce((t, v) => t + (v.total || 0), 0), totAnt = ant.reduce((t, v) => t + (v.total || 0), 0);
+    $("hTitulo").textContent = "Ventas del mes";
+    $("hValor").innerHTML = `${dinero(tot).replace(",00", "")}`;
+    $("hDe").textContent = `mes anterior ${dinero(totAnt).replace(",00", "")}`;
+    $("hLadoT").textContent = "Animales vendidos"; $("hLadoV").textContent = `${mes.reduce((t, v) => t + (v.animales || []).length, 0)} · ${num(mes.reduce((t, v) => t + (v.pesoTotal || 0), 0))} kg`;
+    $("hBarra").style.width = (totAnt ? Math.min(100, tot / totAnt * 100) : tot ? 100 : 0) + "%";
+  }
 }
 </script>
 </body>
